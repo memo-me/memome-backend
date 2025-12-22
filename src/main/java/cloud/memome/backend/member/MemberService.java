@@ -1,5 +1,7 @@
 package cloud.memome.backend.member;
 
+import java.util.NoSuchElementException;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,16 +17,13 @@ public class MemberService {
 
 	@Transactional
 	public Member createNewMember(CreateNewMemberDto dto) {
-		Member member = Member.builder()
-			.nickname(dto.getNickname())
-			.email(dto.getEmail())
-			.build();
+		Member member = Member.create(dto.getNickname(), dto.getEmail());
 		return memberRepository.save(member);
 	}
 
 	public Member getMemberById(Long id) {
 		return memberRepository.findById(id)
-			.orElseThrow();
+			.orElseThrow(() -> new NoSuchElementException("Member not found with id: " + id));
 	}
 
 	@Transactional
