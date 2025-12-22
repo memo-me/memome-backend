@@ -58,7 +58,7 @@ class MemberTest {
 		Assertions.assertThat(member.getCreatedAt()).isNotEqualTo(member.getUpdatedAt());
 	}
 
-	@DisplayName("nickname == null 일 때, 멤버 객체 생성 실패")
+	@DisplayName("nickname == null 일 때, 멤버 수정 실패")
 	@Test
 	public void update_fail_when_nickname_is_null() {
 		//given
@@ -73,7 +73,7 @@ class MemberTest {
 			.isInstanceOf(IllegalArgumentException.class);
 	}
 
-	@DisplayName("email == null 일 때, 멤버 객체 생성 실패")
+	@DisplayName("email == null 일 때, 멤버 수정 실패")
 	@Test
 	public void update_fail_when_email_is_null() {
 		//given
