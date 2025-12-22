@@ -1,4 +1,4 @@
-package cloud.memome.memome_backend;
+package cloud.memome.backend;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
