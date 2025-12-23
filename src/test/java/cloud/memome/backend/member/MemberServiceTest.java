@@ -32,9 +32,7 @@ class MemberServiceTest {
 		String nickname = "test nickname";
 		String email = "test@email.com";
 
-		CreateNewMemberDto dto = new CreateNewMemberDto();
-		dto.setNickname(nickname);
-		dto.setEmail(email);
+		CreateNewMemberDto dto = new CreateNewMemberDto(nickname, email);
 
 		Member member = Member.create(nickname, email);
 		when(memberRepository.save(any(Member.class)))
@@ -93,10 +91,7 @@ class MemberServiceTest {
 		String updatedNickname = "updated nickname";
 		String updatedEmail = "updated@email.com";
 
-		UpdateMemberDto dto = new UpdateMemberDto();
-		dto.setId(1L);
-		dto.setNickname(updatedNickname);
-		dto.setEmail(updatedEmail);
+		UpdateMemberDto dto = new UpdateMemberDto(1L, updatedNickname, updatedEmail);
 
 		Member member = Member.create(nickname, email);
 		when(memberRepository.findById(1L))

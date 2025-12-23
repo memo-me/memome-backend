@@ -1,9 +1,9 @@
 package cloud.memome.backend.member.dto;
 
-import lombok.Data;
+import lombok.Value;
 
-@Data
+@Value
 public class CreateNewMemberDto {
-	private String nickname;
-	private String email;
+	String nickname;
+	String email;
 }
