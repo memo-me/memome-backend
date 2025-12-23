@@ -84,7 +84,7 @@ class MemberServiceTest {
 
 	@DisplayName("기존 회원 정보 수정")
 	@Test
-	public void updateMember_success() throws Exception {
+	public void updateMember_success() {
 		//given
 		String nickname = "test nickname";
 		String email = "test@email.com";
@@ -110,10 +110,33 @@ class MemberServiceTest {
 	@DisplayName("회원 삭제 성공")
 	@Test
 	public void deleteMember_success() {
+		//given
+		Member member = Member.create("nickname", "email@email.com");
+
+		when(memberRepository.findById(any(Long.class)))
+			.thenReturn(Optional.of(member));
+
 		//when
-		memberService.removeMember(1L);
+		memberService.removeMember(any(Long.class));
 
 		//then
-		verify(memberRepository).deleteById(1L);
+		verify(memberRepository).findById(any(Long.class));
+		verify(memberRepository).delete(any(Member.class));
+	}
+
+	@DisplayName("존재하지 않는 회원 삭제 시도")
+	@Test
+	public void delete_fail_when_not_found() {
+		//given
+		when(memberRepository.findById(any(Long.class)))
+			.thenReturn(Optional.empty());
+
+		//when & then
+		Assertions.assertThatThrownBy(() -> memberService.removeMember(any(Long.class)))
+			.isInstanceOf(NoSuchElementException.class);
+
+		//then
+		verify(memberRepository).findById(any(Long.class));
+		verify(memberRepository, never()).delete(any(Member.class));
 	}
 }
