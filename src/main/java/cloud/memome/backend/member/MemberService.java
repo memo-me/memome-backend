@@ -17,13 +17,18 @@ public class MemberService {
 
 	@Transactional
 	public Member createNewMember(CreateNewMemberDto dto) {
-		Member member = Member.create(dto.getNickname(), dto.getEmail());
+		Member member = Member.create(dto.getOAuthIdentity(), dto.getNickname(), dto.getEmail());
 		return memberRepository.save(member);
 	}
 
 	public Member getMemberById(Long id) {
 		return memberRepository.findById(id)
 			.orElseThrow(() -> new NoSuchElementException("Member not found with id: " + id));
+	}
+
+	public Member getMemberByOAuthIdentity(OAuthIdentity oAuthIdentity) {
+		return memberRepository.findByOAuthIdentity(oAuthIdentity)
+			.orElseThrow(() -> new NoSuchElementException("Member not found with OAuthIdentity: " + oAuthIdentity));
 	}
 
 	@Transactional
