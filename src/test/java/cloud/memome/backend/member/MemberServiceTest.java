@@ -14,7 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import cloud.memome.backend.member.dto.CreateNewMemberDto;
+import cloud.memome.backend.auth.OAuthUserInfo;
 import cloud.memome.backend.member.dto.UpdateMemberDto;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,30 +24,63 @@ class MemberServiceTest {
 
 	@InjectMocks
 	private MemberService memberService;
-
-	@DisplayName("새로운 멤버 저장")
+	
+	@DisplayName("조회 또는 생성: 조회")
 	@Test
-	public void createNewMember_success() {
+	public void getOrCreateMember_get() {
 		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "1234567890");
+		ProviderType providerType = ProviderType.GOOGLE;
+		String providerId = "1234567890";
 		String nickname = "test nickname";
 		String email = "test@email.com";
 
-		CreateNewMemberDto dto = new CreateNewMemberDto(oAuthIdentity, nickname, email);
-
+		OAuthIdentity oAuthIdentity = new OAuthIdentity(providerType, providerId);
+		OAuthUserInfo oAuthUserInfo = new OAuthUserInfo(providerType, providerId, nickname, email);
 		Member member = Member.create(oAuthIdentity, nickname, email);
-		when(memberRepository.save(any(Member.class)))
-			.thenReturn(member);
+
+		when(memberRepository.findByOAuthIdentity(oAuthIdentity))
+			.thenReturn(Optional.of(member)); //저장된 객체 조회 및 리턴
 
 		//when
-		Member result = memberService.createNewMember(dto);
+		Member result = memberService.getOrCreateMember(oAuthUserInfo);
 
 		//then
 		Assertions.assertThat(result.getOAuthIdentity()).isEqualTo(oAuthIdentity);
 		Assertions.assertThat(result.getNickname()).isEqualTo(nickname);
 		Assertions.assertThat(result.getEmail()).isEqualTo(email);
 
-		verify(memberRepository).save(any(Member.class));
+		verify(memberRepository).findByOAuthIdentity(oAuthIdentity);
+		verify(memberRepository, never()).save(member);
+	}
+
+	@DisplayName("조회 또는 생성: 생성")
+	@Test
+	public void getOrCreateMember_create() {
+		//given
+		ProviderType providerType = ProviderType.GOOGLE;
+		String providerId = "1234567890";
+		String nickname = "test nickname";
+		String email = "test@email.com";
+
+		OAuthIdentity oAuthIdentity = new OAuthIdentity(providerType, providerId);
+		OAuthUserInfo oAuthUserInfo = new OAuthUserInfo(providerType, providerId, nickname, email);
+		Member member = Member.create(oAuthIdentity, nickname, email);
+
+		when(memberRepository.findByOAuthIdentity(any(OAuthIdentity.class)))
+			.thenReturn(Optional.empty());
+		when(memberRepository.save(any(Member.class)))
+			.thenReturn(member); //새로 저장 후 리턴
+
+		//when
+		Member result = memberService.getOrCreateMember(oAuthUserInfo);
+
+		//then
+		Assertions.assertThat(result.getOAuthIdentity()).isEqualTo(oAuthIdentity);
+		Assertions.assertThat(result.getNickname()).isEqualTo(nickname);
+		Assertions.assertThat(result.getEmail()).isEqualTo(email);
+
+		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
+		verify(memberRepository).save(any(Member.class)); //저장
 	}
 
 	@DisplayName("저장된 멤버 조회")

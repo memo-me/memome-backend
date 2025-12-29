@@ -14,6 +14,12 @@ public class MyOidcService extends OidcUserService {
 
 	@Override
 	public OidcUser loadUser(OidcUserRequest userRequest) throws OAuth2AuthenticationException {
-		return super.loadUser(userRequest);
+		OidcUser oidcUser = super.loadUser(userRequest);
+
+		OAuthUserInfo oAuthUserInfo = OAuthUserInfoResolver.resolve(oidcUser);
+
+		memberService.getOrCreateMember(oAuthUserInfo);
+
+		return oidcUser;
 	}
 }

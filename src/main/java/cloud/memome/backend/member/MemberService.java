@@ -5,7 +5,7 @@ import java.util.NoSuchElementException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import cloud.memome.backend.member.dto.CreateNewMemberDto;
+import cloud.memome.backend.auth.OAuthUserInfo;
 import cloud.memome.backend.member.dto.UpdateMemberDto;
 import lombok.RequiredArgsConstructor;
 
@@ -16,9 +16,11 @@ public class MemberService {
 	private final MemberRepository memberRepository;
 
 	@Transactional
-	public Member createNewMember(CreateNewMemberDto dto) {
-		Member member = Member.create(dto.getOAuthIdentity(), dto.getNickname(), dto.getEmail());
-		return memberRepository.save(member);
+	public Member getOrCreateMember(OAuthUserInfo oAuthUserInfo) {
+		OAuthIdentity oAuthIdentity = new OAuthIdentity(oAuthUserInfo.getProviderType(), oAuthUserInfo.getProviderId());
+		return memberRepository.findByOAuthIdentity(oAuthIdentity)
+			.orElseGet(() -> memberRepository.save(
+				Member.create(oAuthIdentity, oAuthUserInfo.getNickname(), oAuthUserInfo.getEmail())));
 	}
 
 	public Member getMemberById(Long id) {
