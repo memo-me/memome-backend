@@ -38,6 +38,6 @@ public class OAuthIdentity {
 
 	@Override
 	public String toString() {
-		return providerType.toString() + "(/'" + providerId + "/')";
+		return providerType.toString() + "(" + providerId + ")";
 	}
 }
