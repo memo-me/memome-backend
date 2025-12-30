@@ -23,7 +23,7 @@ public class OAuthUserInfoResolver {
 		return new OAuthUserInfo(
 			ProviderType.GOOGLE,
 			oidcUser.getSubject(),
-			oidcUser.getName(),
+			oidcUser.getFullName(),
 			oidcUser.getEmail()
 		);
 	}
