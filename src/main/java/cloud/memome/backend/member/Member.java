@@ -2,17 +2,19 @@ package cloud.memome.backend.member;
 
 import java.time.LocalDateTime;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
+@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"provider_type", "provider_id"}))
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class Member {
@@ -21,7 +23,6 @@ public class Member {
 	private Long id;
 
 	@Embedded
-	@Column(unique = true, updatable = false)
 	private OAuthIdentity oAuthIdentity;
 
 	private String nickname;

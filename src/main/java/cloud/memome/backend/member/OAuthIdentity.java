@@ -3,6 +3,8 @@ package cloud.memome.backend.member;
 import java.util.Objects;
 
 import jakarta.persistence.Embeddable;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,6 +13,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OAuthIdentity {
+	@Enumerated(EnumType.STRING)
 	private ProviderType providerType;
 	private String providerId;
 
