@@ -16,7 +16,7 @@ public class MyOidcService extends OidcUserService {
 	public OidcUser loadUser(OidcUserRequest userRequest) throws OAuth2AuthenticationException {
 		OidcUser oidcUser = super.loadUser(userRequest);
 
-		OAuthUserInfo oAuthUserInfo = OAuthUserInfoResolver.resolve(oidcUser);
+		OAuthUserInfo oAuthUserInfo = OAuthUserInfoResolver.resolve(oidcUser.getAttributes());
 
 		memberService.getOrCreateMember(oAuthUserInfo);
 

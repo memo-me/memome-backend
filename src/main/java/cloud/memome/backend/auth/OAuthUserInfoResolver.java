@@ -1,39 +1,40 @@
 package cloud.memome.backend.auth;
 
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import java.net.URL;
+import java.util.Map;
 
 import cloud.memome.backend.member.ProviderType;
 
 public class OAuthUserInfoResolver {
-	public static OAuthUserInfo resolve(OidcUser oidcUser) {
+	public static OAuthUserInfo resolve(Map<String, Object> attributes) {
 		OAuthUserInfo oAuthUserInfo = null;
-		ProviderType providerType = ProviderType.valueOfIssuer(oidcUser.getIssuer().toString());
+		ProviderType providerType = ProviderType.valueOfIssuer(((URL)attributes.get("iss")).toString());
 		switch (providerType) {
 			case GOOGLE:
-				oAuthUserInfo = resolveGoogle(oidcUser);
+				oAuthUserInfo = resolveGoogle(attributes);
 				break;
 			case KAKAO:
-				oAuthUserInfo = resolveKakao(oidcUser);
+				oAuthUserInfo = resolveKakao(attributes);
 				break;
 		}
 		return oAuthUserInfo;
 	}
 
-	private static OAuthUserInfo resolveGoogle(OidcUser oidcUser) {
+	private static OAuthUserInfo resolveGoogle(Map<String, Object> attributes) {
 		return new OAuthUserInfo(
 			ProviderType.GOOGLE,
-			oidcUser.getSubject(),
-			oidcUser.getFullName(),
-			oidcUser.getEmail()
+			(String)attributes.get("sub"),
+			(String)attributes.get("name"),
+			(String)attributes.get("email")
 		);
 	}
 
-	private static OAuthUserInfo resolveKakao(OidcUser oidcUser) {
+	private static OAuthUserInfo resolveKakao(Map<String, Object> attributes) {
 		return new OAuthUserInfo(
 			ProviderType.KAKAO,
-			oidcUser.getSubject(),
-			oidcUser.getNickName(),
-			oidcUser.getEmail()
+			(String)attributes.get("sub"),
+			(String)attributes.get("nickname"),
+			(String)attributes.get("email")
 		);
 	}
 }
