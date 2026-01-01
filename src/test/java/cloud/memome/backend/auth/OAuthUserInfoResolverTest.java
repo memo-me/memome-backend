@@ -3,6 +3,7 @@ package cloud.memome.backend.auth;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
@@ -68,5 +69,20 @@ class OAuthUserInfoResolverTest {
 		//when && then
 		Assertions.assertThatThrownBy(() -> OAuthUserInfoResolver.resolve(attributes))
 			.isInstanceOf(IllegalArgumentException.class);
+	}
+
+	@Test
+	@DisplayName("provider = null 일 때 - resolve 실패")
+	public void resolve_fail_when_provider_is_null() {
+		//given
+		Map<String, Object> attributes = Map.of(
+			"sub", "0123456789",
+			"nickname", "홍길동",
+			"email", "test@email.com"
+		);
+
+		//when && then
+		Assertions.assertThatThrownBy(() -> OAuthUserInfoResolver.resolve(attributes))
+			.isInstanceOf(NoSuchElementException.class);
 	}
 }
