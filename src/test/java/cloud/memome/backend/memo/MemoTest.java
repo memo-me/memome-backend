@@ -1,27 +1,28 @@
 package cloud.memome.backend.memo;
 
-import static org.mockito.Mockito.*;
-
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import cloud.memome.backend.member.Member;
+import cloud.memome.backend.member.OAuthIdentity;
+import cloud.memome.backend.member.ProviderType;
+import cloud.memome.backend.memo.exception.NotMemoOwnerException;
 
 @ExtendWith(MockitoExtension.class)
 class MemoTest {
-	@Mock
-	private Member author;
-
 	@Test
 	@DisplayName("메모 생성 성공")
 	public void create_memo_success() {
 		//given
 		String title = "memo title";
 		String body = "memo body... test is the test";
+
+		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
+		ReflectionTestUtils.setField(author, "id", 1L);
 
 		//when
 		Memo memo = Memo.create(title, body, author);
@@ -40,6 +41,9 @@ class MemoTest {
 		String title = null;
 		String body = "memo body... test is the test";
 
+		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
+		ReflectionTestUtils.setField(author, "id", 1L);
+
 		//when && then
 		Assertions.assertThatThrownBy(() -> Memo.create(title, body, author))
 			.isInstanceOf(IllegalArgumentException.class);
@@ -51,6 +55,9 @@ class MemoTest {
 		//given
 		String title = "           ";
 		String body = "memo body... test is the test";
+
+		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
+		ReflectionTestUtils.setField(author, "id", 1L);
 
 		//when && then
 		Assertions.assertThatThrownBy(() -> Memo.create(title, body, author))
@@ -64,6 +71,9 @@ class MemoTest {
 		String title = "memo title";
 		String body = null;
 
+		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
+		ReflectionTestUtils.setField(author, "id", 1L);
+
 		//when && then
 		Assertions.assertThatThrownBy(() -> Memo.create(title, body, author))
 			.isInstanceOf(IllegalArgumentException.class);
@@ -75,6 +85,9 @@ class MemoTest {
 		//given
 		String title = "memo title";
 		String body = "                    ";
+
+		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
+		ReflectionTestUtils.setField(author, "id", 1L);
 
 		//when && then
 		Assertions.assertThatThrownBy(() -> Memo.create(title, body, author))
@@ -103,6 +116,9 @@ class MemoTest {
 		String updatedTitle = "memo title, updated";
 		String updatedBody = "memo body... test is the test, updated";
 
+		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
+		ReflectionTestUtils.setField(author, "id", 1L);
+
 		Memo memo = Memo.create(title, body, author);
 
 		//when
@@ -124,6 +140,9 @@ class MemoTest {
 		String updatedTitle = null;
 		String updatedBody = "memo body... test is the test";
 
+		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
+		ReflectionTestUtils.setField(author, "id", 1L);
+
 		Memo memo = Memo.create(title, body, author);
 
 		//when && then
@@ -139,6 +158,9 @@ class MemoTest {
 		String body = "memo body... test is the test";
 		String updatedTitle = "           ";
 		String updatedBody = "memo body... test is the test";
+
+		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
+		ReflectionTestUtils.setField(author, "id", 1L);
 
 		Memo memo = Memo.create(title, body, author);
 
@@ -156,6 +178,9 @@ class MemoTest {
 		String updatedTitle = "memo title";
 		String updatedBody = null;
 
+		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
+		ReflectionTestUtils.setField(author, "id", 1L);
+
 		Memo memo = Memo.create(title, body, author);
 
 		//when && then
@@ -172,6 +197,9 @@ class MemoTest {
 		String updatedTitle = "memo title";
 		String updatedBody = "                    ";
 
+		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
+		ReflectionTestUtils.setField(author, "id", 1L);
+
 		Memo memo = Memo.create(title, body, author);
 
 		//when && then
@@ -181,40 +209,40 @@ class MemoTest {
 
 	@Test
 	@DisplayName("메모 작성자 확인 - 일치")
-	public void is_author_same() {
+	public void assert_author_same() {
 		//given
 		String title = "memo title";
 		String body = "memo body... test is the test";
 
 		Long authorId = 1L;
-		when(author.getId())
-			.thenReturn(authorId);
 
-		Memo memo = Memo.create(title, body, author);
-
-		//when
-		memo.assertAuthor(author.getId());
-
-		//then
-		verify(author).getId();
-	}
-
-	@Test
-	@DisplayName("메모 작성자 확인 - 불일치")
-	public void is_author_not_same() {
-		//given
-		String title = "memo title";
-		String body = "memo body... test is the test";
-
-		Long author1Id = 1L;
-		Long author2Id = 2L;
-		when(author.getId())
-			.thenReturn(author1Id);
+		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
+		ReflectionTestUtils.setField(author, "id", authorId);
 
 		Memo memo = Memo.create(title, body, author);
 
 		//when && then
-		Assertions.assertThatThrownBy(() -> memo.assertAuthor(author.getId()))
-			.isInstanceOf(RuntimeException.class);
+		Assertions.assertThatCode(() -> memo.assertAuthor(authorId))
+			.doesNotThrowAnyException();
+	}
+
+	@Test
+	@DisplayName("메모 작성자 확인 - 불일치")
+	public void assert_author_fail() {
+		//given
+		String title = "memo title";
+		String body = "memo body... test is the test";
+
+		Long authorId = 1L;
+		Long anotherAuthorId = 99L;
+
+		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
+		ReflectionTestUtils.setField(author, "id", authorId);
+
+		Memo memo = Memo.create(title, body, author);
+
+		//when && then
+		Assertions.assertThatThrownBy(() -> memo.assertAuthor(anotherAuthorId))
+			.isExactlyInstanceOf(NotMemoOwnerException.class);
 	}
 }
