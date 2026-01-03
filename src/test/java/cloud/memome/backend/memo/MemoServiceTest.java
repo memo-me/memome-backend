@@ -83,11 +83,6 @@ class MemoServiceTest {
 	@DisplayName("메모 조회 - 실패")
 	public void get_memo_fail() {
 		//given
-		String title = "memo title";
-		String body = "This is Memo body";
-		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
-		Memo memo = Memo.create(title, body, author);
-
 		Long memoId = 1L;
 		Long authorId = 1L;
 		GetOwnedMemoDto dto = new GetOwnedMemoDto(memoId, authorId);
@@ -244,8 +239,6 @@ class MemoServiceTest {
 		when(memoRepository.findById(memoId))
 			.thenReturn(Optional.of(memo));
 
-		Assertions.assertThat(authorId).isNotEqualTo(anotherAuthorId);
-
 		//when && then
 		Assertions.assertThatThrownBy(() -> memoService.removeMemo(new RemoveMemoDto(memoId, anotherAuthorId)))
 			.isInstanceOf(NotMemoOwnerException.class);
@@ -258,14 +251,11 @@ class MemoServiceTest {
 	@DisplayName("존재하지 않는 메모 삭제 - 실패")
 	public void delete_memo_fail_when_memo_not_found() {
 		//given
-		Long memoId = 1L;
 		Long authorId = 1L;
 		Long anotherMemoId = 2L;
 
 		when(memoRepository.findById(anotherMemoId))
 			.thenReturn(Optional.empty());
-
-		Assertions.assertThat(memoId).isNotEqualTo(anotherMemoId);
 
 		//when && then
 		Assertions.assertThatThrownBy(() -> memoService.removeMemo(new RemoveMemoDto(anotherMemoId, authorId)))
