@@ -74,6 +74,11 @@ public class Memo {
 		}
 	}
 
+	@Override
+	public String toString() {
+		return "Memo(id: " + id + ", title: " + title + ")";
+	}
+
 	public void assertAuthor(Long authorId) {
 		if (!this.author.getId().equals(authorId)) {
 			throw new NotMemoOwnerException(this.id, authorId);
