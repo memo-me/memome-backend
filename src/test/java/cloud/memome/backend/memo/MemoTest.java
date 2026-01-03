@@ -35,7 +35,7 @@ class MemoTest {
 
 	@Test
 	@DisplayName("메모 생성 실패 - title == null")
-	public void create_memo_fail_when_tile_is_null() {
+	public void create_memo_fail_when_title_is_null() {
 		//given
 		String title = null;
 		String body = "memo body... test is the test";
@@ -47,7 +47,7 @@ class MemoTest {
 
 	@Test
 	@DisplayName("메모 생성 실패 - title == blank")
-	public void create_memo_fail_when_tile_is_blank() {
+	public void create_memo_fail_when_title_is_blank() {
 		//given
 		String title = "           ";
 		String body = "memo body... test is the test";
@@ -117,7 +117,7 @@ class MemoTest {
 
 	@Test
 	@DisplayName("메모 수정 실패 - title == null")
-	public void update_memo_fail_when_tile_is_null() {
+	public void update_memo_fail_when_title_is_null() {
 		//given
 		String title = "memo title";
 		String body = "memo body... test is the test";
@@ -133,7 +133,7 @@ class MemoTest {
 
 	@Test
 	@DisplayName("메모 수정 실패 - title == blank")
-	public void update_memo_fail_when_tile_is_blank() {
+	public void update_memo_fail_when_title_is_blank() {
 		//given
 		String title = "memo title";
 		String body = "memo body... test is the test";
