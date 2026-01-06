@@ -19,6 +19,10 @@ public class AuthConfig {
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
 		return httpSecurity
+			.authorizeHttpRequests(request -> request
+				.requestMatchers("/error/**").permitAll()
+				.anyRequest().authenticated()
+			)
 			.oauth2Login(oauth2 -> oauth2
 				.userInfoEndpoint(userinfo -> userinfo
 					.oidcUserService(oidcUserService())))
