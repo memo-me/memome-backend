@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import cloud.memome.backend.auth.OAuthUserInfo;
+import cloud.memome.backend.member.dto.IdentityDto;
 import cloud.memome.backend.member.dto.UpdateMemberDto;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,7 +25,7 @@ class MemberServiceTest {
 
 	@InjectMocks
 	private MemberService memberService;
-	
+
 	@DisplayName("조회 또는 생성: 조회")
 	@Test
 	public void getOrCreateMember_get() {
@@ -132,7 +133,7 @@ class MemberServiceTest {
 			.thenReturn(Optional.of(member));
 
 		//when
-		Member find = memberService.getMemberByOAuthIdentity(oAuthIdentity);
+		Member find = memberService.getMemberByIdentity(new IdentityDto(ProviderType.GOOGLE, "1234567890"));
 
 		//then
 		Assertions.assertThat(find.getOAuthIdentity()).isEqualTo(oAuthIdentity);
@@ -152,7 +153,8 @@ class MemberServiceTest {
 			.thenReturn(Optional.empty());
 
 		//when && then
-		Assertions.assertThatThrownBy(() -> memberService.getMemberByOAuthIdentity(oAuthIdentity))
+		Assertions.assertThatThrownBy(
+				() -> memberService.getMemberByIdentity(new IdentityDto(ProviderType.GOOGLE, "1234567890")))
 			.isInstanceOf(NoSuchElementException.class);
 		verify(memberRepository).findByOAuthIdentity(oAuthIdentity);
 	}

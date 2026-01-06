@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import cloud.memome.backend.auth.OAuthUserInfo;
+import cloud.memome.backend.member.dto.IdentityDto;
 import cloud.memome.backend.member.dto.UpdateMemberDto;
 import lombok.RequiredArgsConstructor;
 
@@ -28,7 +29,8 @@ public class MemberService {
 			.orElseThrow(() -> new NoSuchElementException("Member not found with id: " + id));
 	}
 
-	public Member getMemberByOAuthIdentity(OAuthIdentity oAuthIdentity) {
+	public Member getMemberByIdentity(IdentityDto identityDto) {
+		OAuthIdentity oAuthIdentity = new OAuthIdentity(identityDto.getProviderType(), identityDto.getProviderId());
 		return memberRepository.findByOAuthIdentity(oAuthIdentity)
 			.orElseThrow(() -> new NoSuchElementException("Member not found with OAuthIdentity: " + oAuthIdentity));
 	}
