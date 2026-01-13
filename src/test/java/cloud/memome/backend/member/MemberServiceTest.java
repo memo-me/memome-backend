@@ -93,31 +93,32 @@ class MemberServiceTest {
 		String email = "test@email.com";
 
 		Member member = Member.create(oAuthIdentity, nickname, email);
-		when(memberRepository.findById(1L))
+		when(memberRepository.findByOAuthIdentity(oAuthIdentity))
 			.thenReturn(Optional.of(member));
 
 		//when
-		Member find = memberService.getMemberById(1L);
+		Member find = memberService.getMemberByIdentity(new IdentityDto(ProviderType.GOOGLE, "1234567890"));
 
 		//then
 		Assertions.assertThat(find.getOAuthIdentity()).isEqualTo(oAuthIdentity);
 		Assertions.assertThat(find.getNickname()).isEqualTo(nickname);
 		Assertions.assertThat(find.getEmail()).isEqualTo(email);
 
-		verify(memberRepository).findById(1L);
+		verify(memberRepository).findByOAuthIdentity(oAuthIdentity);
 	}
 
 	@DisplayName("저장되지 않은 멤버 조회")
 	@Test
 	public void getMemberById_notFound() {
 		//given
-		when(memberRepository.findById(2L))
+		when(memberRepository.findByOAuthIdentity(any(OAuthIdentity.class)))
 			.thenReturn(Optional.empty());
 
 		//when & then
-		Assertions.assertThatThrownBy(() -> memberService.getMemberById(2L))
+		Assertions.assertThatThrownBy(
+				() -> memberService.getMemberByIdentity(new IdentityDto(ProviderType.GOOGLE, "1234567890")))
 			.isInstanceOf(NoSuchElementException.class);
-		verify(memberRepository).findById(2L);
+		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
 	}
 
 	@DisplayName("저장된 멤버 OAuthIdentity로 조회")
@@ -169,21 +170,22 @@ class MemberServiceTest {
 		String updatedNickname = "updated nickname";
 		String updatedEmail = "updated@email.com";
 
-		UpdateMemberDto dto = new UpdateMemberDto(1L, updatedNickname, updatedEmail);
+		UpdateMemberDto dto = new UpdateMemberDto(updatedNickname, updatedEmail);
 
 		Member member = Member.create(oAuthIdentity, nickname, email);
-		when(memberRepository.findById(1L))
+		when(memberRepository.findByOAuthIdentity(oAuthIdentity))
 			.thenReturn(Optional.of(member));
 
 		//when
-		Member result = memberService.updateMember(dto);
+		Member result = memberService.updateMember(
+			new IdentityDto(ProviderType.GOOGLE, "1234567890"), dto);
 
 		//then
 		Assertions.assertThat(result.getOAuthIdentity()).isEqualTo(oAuthIdentity);
 		Assertions.assertThat(result.getNickname()).isEqualTo(updatedNickname);
 		Assertions.assertThat(result.getEmail()).isEqualTo(updatedEmail);
 
-		verify(memberRepository).findById(1L);
+		verify(memberRepository).findByOAuthIdentity(oAuthIdentity);
 	}
 
 	@DisplayName("회원 삭제 성공")
@@ -193,14 +195,14 @@ class MemberServiceTest {
 		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "1234567890");
 		Member member = Member.create(oAuthIdentity, "nickname", "email@email.com");
 
-		when(memberRepository.findById(any(Long.class)))
+		when(memberRepository.findByOAuthIdentity(oAuthIdentity))
 			.thenReturn(Optional.of(member));
 
 		//when
-		memberService.removeMember(any(Long.class));
+		memberService.removeMember(new IdentityDto(ProviderType.GOOGLE, "1234567890"));
 
 		//then
-		verify(memberRepository).findById(any(Long.class));
+		verify(memberRepository).findByOAuthIdentity(oAuthIdentity);
 		verify(memberRepository).delete(any(Member.class));
 	}
 
@@ -208,15 +210,16 @@ class MemberServiceTest {
 	@Test
 	public void delete_fail_when_not_found() {
 		//given
-		when(memberRepository.findById(any(Long.class)))
+		when(memberRepository.findByOAuthIdentity(any(OAuthIdentity.class)))
 			.thenReturn(Optional.empty());
 
 		//when & then
-		Assertions.assertThatThrownBy(() -> memberService.removeMember(any(Long.class)))
+		Assertions.assertThatThrownBy(
+				() -> memberService.removeMember(new IdentityDto(ProviderType.GOOGLE, "1234567890")))
 			.isInstanceOf(NoSuchElementException.class);
 
 		//then
-		verify(memberRepository).findById(any(Long.class));
+		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
 		verify(memberRepository, never()).delete(any(Member.class));
 	}
 }

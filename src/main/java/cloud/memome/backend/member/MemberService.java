@@ -24,11 +24,6 @@ public class MemberService {
 				Member.create(oAuthIdentity, oAuthUserInfo.getNickname(), oAuthUserInfo.getEmail())));
 	}
 
-	public Member getMemberById(Long id) {
-		return memberRepository.findById(id)
-			.orElseThrow(() -> new NoSuchElementException("Member not found with id: " + id));
-	}
-
 	public Member getMemberByIdentity(IdentityDto identityDto) {
 		OAuthIdentity oAuthIdentity = new OAuthIdentity(identityDto.getProviderType(), identityDto.getProviderId());
 		return memberRepository.findByOAuthIdentity(oAuthIdentity)
@@ -36,15 +31,15 @@ public class MemberService {
 	}
 
 	@Transactional
-	public Member updateMember(UpdateMemberDto dto) {
-		Member member = this.getMemberById(dto.getId());
+	public Member updateMember(IdentityDto identityDto, UpdateMemberDto dto) {
+		Member member = this.getMemberByIdentity(identityDto);
 		member.updateMember(dto.getNickname(), dto.getEmail());
 		return member;
 	}
 
 	@Transactional
-	public void removeMember(Long id) {
-		Member member = this.getMemberById(id);
+	public void removeMember(IdentityDto identityDto) {
+		Member member = this.getMemberByIdentity(identityDto);
 		memberRepository.delete(member);
 	}
 }
