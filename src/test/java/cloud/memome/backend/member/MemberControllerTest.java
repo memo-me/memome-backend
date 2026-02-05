@@ -1,17 +1,23 @@
 package cloud.memome.backend.member;
 
+import static org.hamcrest.Matchers.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -70,6 +76,8 @@ class MemberControllerTest {
 			.andExpect(jsonPath("email").value(email));
 	}
 
+	//TODO: GET /members/me 존재하지 않는 회원 정보 조회
+
 	@Test
 	@DisplayName("PUT /members/me: 인증되지 않은 회원 접근: 401")
 	public void updateAccount_unauthorized() throws Exception {
@@ -88,7 +96,7 @@ class MemberControllerTest {
 
 		Member updated_member = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "12345678"), updated_nickname,
 			updated_email);
-		
+
 		when(memberService.updateMember(any(IdentityDto.class), any(UpdateMemberDto.class)))
 			.thenReturn(updated_member);
 
@@ -114,6 +122,114 @@ class MemberControllerTest {
 			.andExpect(jsonPath("email").value(updated_email))
 			.andExpect(jsonPath("createdAt").exists())
 			.andExpect(jsonPath("updatedAt").exists());
+	}
+
+	//TODO: PUT /members/me 존재하지 않는 회원 정보 수정
+
+	@Test
+	@DisplayName("PUT /members/me: nickname이 blank 일 때 검증실패: 400")
+	public void updateAccount_fail_when_nickname_is_blank() throws Exception {
+		//given
+		String nickname = "홍길동";
+		String email = "test@test.com";
+
+		String updated_nickname = "          ";
+		String updated_email = "고길동@test.com";
+
+		Map<String, String> body = new HashMap<>();
+		body.put("nickname", updated_nickname);
+		body.put("email", updated_email);
+
+		//when && then
+		URL url = new URL(ProviderType.GOOGLE.getIssuer());
+		mockMvc.perform(put("/members/me")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(body))
+				.with(oidcLogin()
+					.idToken(token -> token
+						.claims(claims -> {
+							claims.put("iss", url);
+							claims.put("sub", "12345678");
+							claims.put("name", nickname);
+							claims.put("email", email);
+						}))))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("type").value("about:blank"))
+			.andExpect(jsonPath("title").value("Bad Request"))
+			.andExpect(jsonPath("status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.errors[*].field").value(hasItem("nickname")))
+			.andExpect(jsonPath("$.errors[*].message").exists());
+	}
+
+	@Test
+	@DisplayName("PUT /members/me: email이 blank 일 때 검증실패: 400")
+	public void updateAccount_fail_when_email_is_blank() throws Exception {
+		//given
+		String nickname = "홍길동";
+		String email = "test@test.com";
+
+		String updated_nickname = "변경된 닉네임";
+		String updated_email = "        ";
+
+		Map<String, String> body = new HashMap<>();
+		body.put("nickname", updated_nickname);
+		body.put("email", updated_email);
+
+		//when && then
+		URL url = new URL(ProviderType.GOOGLE.getIssuer());
+		mockMvc.perform(put("/members/me")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(body))
+				.with(oidcLogin()
+					.idToken(token -> token
+						.claims(claims -> {
+							claims.put("iss", url);
+							claims.put("sub", "12345678");
+							claims.put("name", nickname);
+							claims.put("email", email);
+						}))))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("type").value("about:blank"))
+			.andExpect(jsonPath("title").value("Bad Request"))
+			.andExpect(jsonPath("status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.errors[*].field").value(hasItem("email")))
+			.andExpect(jsonPath("$.errors[*].message").exists());
+	}
+
+	@Test
+	@DisplayName("PUT /members/me: email이 이메일 형식이 아닐 때 검증실패: 400")
+	public void updateAccount_fail_when_email_is_well_formed() throws Exception {
+		//given
+		String nickname = "홍길동";
+		String email = "test@test.com";
+
+		String updated_nickname = "변경된 닉네임";
+		String updated_email = "잘못된 이메일 형식";
+
+		Map<String, String> body = new HashMap<>();
+		body.put("nickname", updated_nickname);
+		body.put("email", updated_email);
+
+		//when && then
+		URL url = new URL(ProviderType.GOOGLE.getIssuer());
+		mockMvc.perform(put("/members/me")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(body))
+				.with(oidcLogin()
+					.idToken(token -> token
+						.claims(claims -> {
+							claims.put("iss", url);
+							claims.put("sub", "12345678");
+							claims.put("name", nickname);
+							claims.put("email", email);
+						}))))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("type").value("about:blank"))
+			.andExpect(jsonPath("title").value("Bad Request"))
+			.andExpect(jsonPath("status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.errors[*].field").value(hasItem("email")))
+			.andExpect(jsonPath("$.errors[*].message").exists())
+			.andDo(print());
 	}
 
 	@Test

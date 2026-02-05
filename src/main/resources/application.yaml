@@ -1,6 +1,11 @@
 spring:
   application:
     name: memome-backend
+  mvc:
+    problemdetails:
+      enabled: true
+  messages:
+    basename: messages, errors
   security:
     oauth2:
       client:
