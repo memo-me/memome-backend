@@ -3,7 +3,6 @@ package cloud.memome.backend.member;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import org.assertj.core.api.Assertions;
@@ -17,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import cloud.memome.backend.auth.OAuthUserInfo;
 import cloud.memome.backend.member.dto.IdentityDto;
 import cloud.memome.backend.member.dto.UpdateMemberDto;
+import cloud.memome.backend.member.exception.InvalidAuthenticationException;
 
 @ExtendWith(MockitoExtension.class)
 class MemberServiceTest {
@@ -117,7 +117,7 @@ class MemberServiceTest {
 		//when & then
 		Assertions.assertThatThrownBy(
 				() -> memberService.getMemberByIdentity(new IdentityDto(ProviderType.GOOGLE, "1234567890")))
-			.isInstanceOf(NoSuchElementException.class);
+			.isInstanceOf(InvalidAuthenticationException.class);
 		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
 	}
 
@@ -156,7 +156,7 @@ class MemberServiceTest {
 		//when && then
 		Assertions.assertThatThrownBy(
 				() -> memberService.getMemberByIdentity(new IdentityDto(ProviderType.GOOGLE, "1234567890")))
-			.isInstanceOf(NoSuchElementException.class);
+			.isInstanceOf(InvalidAuthenticationException.class);
 		verify(memberRepository).findByOAuthIdentity(oAuthIdentity);
 	}
 
@@ -216,7 +216,7 @@ class MemberServiceTest {
 		//when & then
 		Assertions.assertThatThrownBy(
 				() -> memberService.removeMember(new IdentityDto(ProviderType.GOOGLE, "1234567890")))
-			.isInstanceOf(NoSuchElementException.class);
+			.isInstanceOf(InvalidAuthenticationException.class);
 
 		//then
 		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));

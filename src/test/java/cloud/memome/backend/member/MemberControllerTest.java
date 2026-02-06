@@ -12,6 +12,7 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import cloud.memome.backend.auth.AuthConfig;
 import cloud.memome.backend.member.dto.IdentityDto;
 import cloud.memome.backend.member.dto.UpdateMemberDto;
+import cloud.memome.backend.member.exception.InvalidAuthenticationException;
 
 @WebMvcTest(MemberController.class)
 @Import(AuthConfig.class)
@@ -76,7 +78,37 @@ class MemberControllerTest {
 			.andExpect(jsonPath("email").value(email));
 	}
 
-	//TODO: GET /members/me 존재하지 않는 회원 정보 조회
+	@Test
+	@DisplayName("GET /members/me: 인증정보가 유효하지 않을 때 인증 회원정보 조회 실패(401)")
+	public void getAccount_fail_when_authentication_is_invalid() throws Exception {
+		String nickname = "홍길동";
+		String email = "test@test.com";
+
+		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "12345678");
+		OAuthIdentity invalidOAuthIdentity = new OAuthIdentity(ProviderType.KAKAO, oAuthIdentity.getProviderId());
+		Assertions.assertThat(invalidOAuthIdentity).isNotEqualTo(oAuthIdentity);
+
+		when(memberService.getMemberByIdentity(any(IdentityDto.class)))
+			.thenThrow(new InvalidAuthenticationException(invalidOAuthIdentity));
+
+		mockMvc.perform(get("/members/me")
+				.with(oidcLogin()
+					.idToken(token -> token
+						.claims(claims -> {
+							claims.put("iss", changeProviderTypeToURL(invalidOAuthIdentity.getProviderType()));
+							claims.put("sub", invalidOAuthIdentity.getProviderId());
+							claims.put("name", nickname);
+							claims.put("email", email);
+						})
+					)
+				)
+			)
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("type").value("about:blank"))
+			.andExpect(jsonPath("title").value("Unauthorized"))
+			.andExpect(jsonPath("status").value(HttpStatus.UNAUTHORIZED.value()))
+			.andExpect(jsonPath("detail").exists());
+	}
 
 	@Test
 	@DisplayName("PUT /members/me: 인증되지 않은 회원 접근: 401")
@@ -125,6 +157,46 @@ class MemberControllerTest {
 	}
 
 	//TODO: PUT /members/me 존재하지 않는 회원 정보 수정
+	@Test
+	@DisplayName("PUT /members/me: 인증정보가 유효하지 않을 때 인증 회원정보 수정 실패(401)")
+	public void updateAccount_fail_when_authentication_is_invalid() throws Exception {
+		String nickname = "홍길동";
+		String email = "test@test.com";
+
+		String updated_nickname = "고길동";
+		String updated_email = "고길동@test.com";
+
+		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "12345678");
+		OAuthIdentity invalidOAuthIdentity = new OAuthIdentity(ProviderType.KAKAO, oAuthIdentity.getProviderId());
+		Assertions.assertThat(invalidOAuthIdentity).isNotEqualTo(oAuthIdentity);
+
+		Map<String, String> body = new HashMap<>();
+		body.put("nickname", updated_nickname);
+		body.put("email", updated_email);
+
+		when(memberService.updateMember(any(IdentityDto.class), any(UpdateMemberDto.class)))
+			.thenThrow(new InvalidAuthenticationException(invalidOAuthIdentity));
+
+		mockMvc.perform(put("/members/me")
+				.with(oidcLogin()
+					.idToken(token -> token
+						.claims(claims -> {
+							claims.put("iss", changeProviderTypeToURL(invalidOAuthIdentity.getProviderType()));
+							claims.put("sub", invalidOAuthIdentity.getProviderId());
+							claims.put("name", nickname);
+							claims.put("email", email);
+						})
+					)
+				)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(body))
+			)
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("type").value("about:blank"))
+			.andExpect(jsonPath("title").value("Unauthorized"))
+			.andExpect(jsonPath("status").value(HttpStatus.UNAUTHORIZED.value()))
+			.andExpect(jsonPath("detail").exists());
+	}
 
 	@Test
 	@DisplayName("PUT /members/me: nickname이 blank 일 때 검증실패: 400")
@@ -217,12 +289,7 @@ class MemberControllerTest {
 				.content(objectMapper.writeValueAsString(body))
 				.with(oidcLogin()
 					.idToken(token -> token
-						.claims(claims -> {
-							claims.put("iss", url);
-							claims.put("sub", "12345678");
-							claims.put("name", nickname);
-							claims.put("email", email);
-						}))))
+						.claims(claims -> setClaims(claims, ProviderType.GOOGLE, "12345678", nickname, email)))))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("type").value("about:blank"))
 			.andExpect(jsonPath("title").value("Bad Request"))
@@ -237,5 +304,25 @@ class MemberControllerTest {
 	public void deleteAccount_unauthorized() throws Exception {
 		mockMvc.perform(delete("/members/me"))
 			.andExpect(status().isUnauthorized());
+	}
+
+	private URL changeProviderTypeToURL(ProviderType type) {
+		URL url;
+		try {
+			url = new URL(type.getIssuer());
+		} catch (Exception e) {
+			throw new RuntimeException("WRONG URL FORMAT: " + type.getIssuer());
+		}
+
+		return url;
+	}
+
+	private Map<String, Object> setClaims(Map<String, Object> claims, ProviderType type, String providerId,
+		String nickname, String email) {
+		claims.put("iss", changeProviderTypeToURL(type));
+		claims.put("sub", providerId);
+		claims.put("name", nickname);
+		claims.put("email", email);
+		return claims;
 	}
 }
