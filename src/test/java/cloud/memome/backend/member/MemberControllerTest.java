@@ -121,7 +121,7 @@ class MemberControllerTest {
 			.andExpect(jsonPath("createdAt").exists())
 			.andExpect(jsonPath("updatedAt").exists());
 	}
-	
+
 	@Test
 	@DisplayName("PUT /members/me: 인증정보가 유효하지 않을 때 인증 회원정보 수정 실패(401)")
 	public void updateAccount_fail_when_authentication_is_invalid() throws Exception {
@@ -150,6 +150,31 @@ class MemberControllerTest {
 	}
 
 	@Test
+	@DisplayName("PUT /members/me: nickname이 null 일 때 검증실패: 400")
+	public void updateAccount_fail_when_nickname_is_null() throws Exception {
+		//given
+		ProviderType providerType = ProviderType.GOOGLE;
+		String providerId = "12345678";
+		String updated_nickname = null;
+		String updated_email = "고길동@test.com";
+
+		OAuthIdentity oAuthIdentity = new OAuthIdentity(providerType, providerId);
+
+		Map<String, String> body = new HashMap<>();
+		body.put("nickname", updated_nickname);
+		body.put("email", updated_email);
+
+		//when && then
+		put_request_with_oidc("/members/me", oAuthIdentity, body)
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("type").value("about:blank"))
+			.andExpect(jsonPath("title").value("Bad Request"))
+			.andExpect(jsonPath("status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.errors[*].field").value(hasItem("nickname")))
+			.andExpect(jsonPath("$.errors[*].message").exists());
+	}
+
+	@Test
 	@DisplayName("PUT /members/me: nickname이 blank 일 때 검증실패: 400")
 	public void updateAccount_fail_when_nickname_is_blank() throws Exception {
 		//given
@@ -171,6 +196,31 @@ class MemberControllerTest {
 			.andExpect(jsonPath("title").value("Bad Request"))
 			.andExpect(jsonPath("status").value(HttpStatus.BAD_REQUEST.value()))
 			.andExpect(jsonPath("$.errors[*].field").value(hasItem("nickname")))
+			.andExpect(jsonPath("$.errors[*].message").exists());
+	}
+
+	@Test
+	@DisplayName("PUT /members/me: email이 null일 때 검증실패: 400")
+	public void updateAccount_fail_when_email_is_null() throws Exception {
+		//given
+		ProviderType providerType = ProviderType.GOOGLE;
+		String providerId = "12345678";
+		String updated_nickname = "변경된 닉네임";
+		String updated_email = null;
+
+		OAuthIdentity oAuthIdentity = new OAuthIdentity(providerType, providerId);
+
+		Map<String, String> body = new HashMap<>();
+		body.put("nickname", updated_nickname);
+		body.put("email", updated_email);
+
+		//when && then
+		put_request_with_oidc("/members/me", oAuthIdentity, body)
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("type").value("about:blank"))
+			.andExpect(jsonPath("title").value("Bad Request"))
+			.andExpect(jsonPath("status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.errors[*].field").value(hasItem("email")))
 			.andExpect(jsonPath("$.errors[*].message").exists());
 	}
 
@@ -231,6 +281,26 @@ class MemberControllerTest {
 			.andExpect(status().isUnauthorized());
 	}
 
+	@Test
+	@DisplayName("DELETE /members/me: 인증정보가 유효하지 않을 때 계정 삭제 실패: 401")
+	public void deleteAccount_fail_when_account() throws Exception {
+		//given
+		ProviderType providerType = ProviderType.GOOGLE;
+		String providerId = "12345678";
+
+		OAuthIdentity invalidOAuthIdentity = new OAuthIdentity(providerType, providerId);
+		doThrow(new InvalidAuthenticationException(invalidOAuthIdentity))
+			.when(memberService).removeMember(any(IdentityDto.class));
+
+		delete_request_with_oidc("/members/me", invalidOAuthIdentity)
+			.andExpect(status().isUnauthorized())
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("type").value("about:blank"))
+			.andExpect(jsonPath("title").value("Unauthorized"))
+			.andExpect(jsonPath("status").value(HttpStatus.UNAUTHORIZED.value()))
+			.andExpect(jsonPath("detail").exists());
+	}
+
 	private URL changeProviderTypeToURL(ProviderType type) {
 		URL url;
 		try {
@@ -256,6 +326,16 @@ class MemberControllerTest {
 		return mockMvc.perform(put(uri)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(objectMapper.writeValueAsString(body))
+			.with(oidcLogin().idToken(token -> token.claims(claims -> {
+					claims.put("iss", changeProviderTypeToURL(oAuthIdentity.getProviderType()));
+					claims.put("sub", oAuthIdentity.getProviderId());
+				}))
+			)
+		);
+	}
+
+	private ResultActions delete_request_with_oidc(String uri, OAuthIdentity oAuthIdentity) throws Exception {
+		return mockMvc.perform(delete(uri)
 			.with(oidcLogin().idToken(token -> token.claims(claims -> {
 					claims.put("iss", changeProviderTypeToURL(oAuthIdentity.getProviderType()));
 					claims.put("sub", oAuthIdentity.getProviderId());
