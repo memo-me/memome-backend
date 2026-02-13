@@ -50,8 +50,8 @@ class MemberServiceTest {
 		Assertions.assertThat(result.getNickname()).isEqualTo(nickname);
 		Assertions.assertThat(result.getEmail()).isEqualTo(email);
 
-		verify(memberRepository).findByOAuthIdentity(oAuthIdentity);
-		verify(memberRepository, never()).save(member);
+		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
+		verify(memberRepository, never()).save(any(Member.class));
 	}
 
 	@DisplayName("조회 또는 생성: 생성")
@@ -104,7 +104,7 @@ class MemberServiceTest {
 		Assertions.assertThat(find.getNickname()).isEqualTo(nickname);
 		Assertions.assertThat(find.getEmail()).isEqualTo(email);
 
-		verify(memberRepository).findByOAuthIdentity(oAuthIdentity);
+		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
 	}
 
 	@DisplayName("저장되지 않은 멤버 조회")
@@ -141,7 +141,7 @@ class MemberServiceTest {
 		Assertions.assertThat(find.getNickname()).isEqualTo(nickname);
 		Assertions.assertThat(find.getEmail()).isEqualTo(email);
 
-		verify(memberRepository).findByOAuthIdentity(oAuthIdentity);
+		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
 	}
 
 	@DisplayName("존재하지 않는 멤버 OAuthIdentity로 조회")
@@ -157,7 +157,7 @@ class MemberServiceTest {
 		Assertions.assertThatThrownBy(
 				() -> memberService.getMemberByIdentity(new IdentityDto(ProviderType.GOOGLE, "1234567890")))
 			.isInstanceOf(InvalidAuthenticationException.class);
-		verify(memberRepository).findByOAuthIdentity(oAuthIdentity);
+		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
 	}
 
 	@DisplayName("기존 회원 정보 수정")
@@ -185,7 +185,7 @@ class MemberServiceTest {
 		Assertions.assertThat(result.getNickname()).isEqualTo(updatedNickname);
 		Assertions.assertThat(result.getEmail()).isEqualTo(updatedEmail);
 
-		verify(memberRepository).findByOAuthIdentity(oAuthIdentity);
+		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
 	}
 
 	@DisplayName("회원 삭제 성공")
@@ -202,7 +202,7 @@ class MemberServiceTest {
 		memberService.removeMember(new IdentityDto(ProviderType.GOOGLE, "1234567890"));
 
 		//then
-		verify(memberRepository).findByOAuthIdentity(oAuthIdentity);
+		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
 		verify(memberRepository).delete(any(Member.class));
 	}
 

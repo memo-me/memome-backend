@@ -8,7 +8,7 @@ import lombok.Value;
 public class UpdateMyInfoRequest {
 	@NotBlank
 	String nickname;
-	@Email
 	@NotBlank
+	@Email
 	String email;
 }
