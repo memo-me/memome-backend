@@ -80,7 +80,7 @@ class MemberControllerTest {
 		OAuthIdentity invalidOAuthIdentity = new OAuthIdentity(providerType, providerId);
 
 		when(memberService.getMemberByIdentity(any(IdentityDto.class)))
-			.thenThrow(new InvalidAuthenticationException(invalidOAuthIdentity));
+			.thenThrow(new InvalidAuthenticationException());
 
 		get_request_with_oidc("/members/me", invalidOAuthIdentity)
 			.andExpect(status().isUnauthorized())
@@ -133,7 +133,7 @@ class MemberControllerTest {
 
 		OAuthIdentity invalidOAuthIdentity = new OAuthIdentity(providerType, providerId);
 		when(memberService.updateMember(any(IdentityDto.class), any(UpdateMemberDto.class)))
-			.thenThrow(new InvalidAuthenticationException(invalidOAuthIdentity));
+			.thenThrow(new InvalidAuthenticationException());
 
 		Map<String, String> body = new HashMap<>();
 		body.put("nickname", updated_nickname);
@@ -289,7 +289,7 @@ class MemberControllerTest {
 		String providerId = "12345678";
 
 		OAuthIdentity invalidOAuthIdentity = new OAuthIdentity(providerType, providerId);
-		doThrow(new InvalidAuthenticationException(invalidOAuthIdentity))
+		doThrow(new InvalidAuthenticationException())
 			.when(memberService).removeMember(any(IdentityDto.class));
 
 		delete_request_with_oidc("/members/me", invalidOAuthIdentity)

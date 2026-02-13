@@ -26,7 +26,7 @@ public class MemberService {
 	public Member getMemberByIdentity(IdentityDto identityDto) {
 		OAuthIdentity oAuthIdentity = new OAuthIdentity(identityDto.getProviderType(), identityDto.getProviderId());
 		return memberRepository.findByOAuthIdentity(oAuthIdentity)
-			.orElseThrow(() -> new InvalidAuthenticationException(oAuthIdentity));
+			.orElseThrow(() -> new InvalidAuthenticationException());
 	}
 
 	@Transactional

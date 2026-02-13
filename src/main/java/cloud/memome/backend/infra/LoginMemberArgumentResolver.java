@@ -1,6 +1,7 @@
 package cloud.memome.backend.infra;
 
 import org.springframework.core.MethodParameter;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -12,7 +13,7 @@ import cloud.memome.backend.auth.Login;
 import cloud.memome.backend.auth.LoginMember;
 import cloud.memome.backend.auth.OAuthUserInfo;
 import cloud.memome.backend.auth.OAuthUserInfoResolver;
-import cloud.memome.backend.auth.exception.InvalidPrincipal;
+import cloud.memome.backend.auth.exception.UnauthenticatedException;
 
 public class LoginMemberArgumentResolver implements HandlerMethodArgumentResolver {
 	@Override
@@ -25,9 +26,14 @@ public class LoginMemberArgumentResolver implements HandlerMethodArgumentResolve
 	@Override
 	public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
 		NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
-		Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication == null) {
+			throw new UnauthenticatedException();
+		}
+
+		Object principal = authentication.getPrincipal();
 		if (!(principal instanceof OAuth2User)) {
-			throw new InvalidPrincipal(OAuth2User.class.getName(), principal.getClass().getName());
+			throw new UnauthenticatedException();
 		}
 
 		OAuthUserInfo result = OAuthUserInfoResolver.resolve(((OAuth2User)principal).getAttributes());
