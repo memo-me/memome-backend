@@ -8,6 +8,7 @@ import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.web.SecurityFilterChain;
 
 import cloud.memome.backend.member.MemberService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
@@ -19,9 +20,16 @@ public class AuthConfig {
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
 		return httpSecurity
+			.authorizeHttpRequests(request -> request
+				.requestMatchers("/error/**").permitAll()
+				.anyRequest().authenticated()
+			)
 			.oauth2Login(oauth2 -> oauth2
 				.userInfoEndpoint(userinfo -> userinfo
 					.oidcUserService(oidcUserService())))
+			.exceptionHandling(exception -> exception
+				.authenticationEntryPoint((req, res, ex) ->
+					res.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
 			.build();
 	}
 
