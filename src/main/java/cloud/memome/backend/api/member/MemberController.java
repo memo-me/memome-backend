@@ -28,7 +28,8 @@ public class MemberController {
 
 	@GetMapping("/me")
 	public MyInfoResponse getAccount(@Login LoginMember loginMember) {
-		Member member = memberService.getMemberByIdentity(IdentityDto.create(loginMember));
+		Member member = memberService.getMemberByIdentity(
+			new IdentityDto(loginMember.getProviderType(), loginMember.getProviderId()));
 		return MyInfoResponse.create(member);
 	}
 
@@ -36,7 +37,7 @@ public class MemberController {
 	public MyInfoResponse updateAccount(@Login LoginMember loginMember,
 		@Validated @RequestBody UpdateMyInfoRequest updateMyInfoReq) {
 		Member member = memberService.updateMember(
-			IdentityDto.create(loginMember),
+			new IdentityDto(loginMember.getProviderType(), loginMember.getProviderId()),
 			new UpdateMemberDto(updateMyInfoReq.getNickname(), updateMyInfoReq.getEmail()));
 		return MyInfoResponse.create(member);
 	}
@@ -44,6 +45,6 @@ public class MemberController {
 	@DeleteMapping("/me")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void deleteAccount(@Login LoginMember loginMember) {
-		memberService.removeMember(IdentityDto.create(loginMember));
+		memberService.removeMember(new IdentityDto(loginMember.getProviderType(), loginMember.getProviderId()));
 	}
 }
