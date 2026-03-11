@@ -57,7 +57,7 @@ class MemoServiceTest {
 
 	@Test
 	@DisplayName("메모 조회 - 성공")
-	public void get_memo_success() {
+	public void get_memo_success_test() {
 		//given
 		String title = "memo title";
 		String body = "This is Memo body";
@@ -65,14 +65,11 @@ class MemoServiceTest {
 		Memo memo = Memo.create(title, body, author);
 
 		Long memoId = 1L;
-		Long authorId = 1L;
-		GetOwnedMemoDto dto = new GetOwnedMemoDto(memoId, authorId);
-
-		when(memoRepository.findByIdAndAuthorId(memoId, authorId))
+		when(memoRepository.findByIdAndAuthor(memoId, author))
 			.thenReturn(Optional.of(memo));
 
 		//when
-		Memo result = memoService.getOwnedMemo(dto);
+		Memo result = memoService.getOwnedMemo(new GetOwnedMemoDto(memoId, author));
 
 		//then
 		Assertions.assertThat(result).isNotNull();
@@ -86,10 +83,10 @@ class MemoServiceTest {
 	public void get_memo_fail() {
 		//given
 		Long memoId = 1L;
-		Long authorId = 1L;
-		GetOwnedMemoDto dto = new GetOwnedMemoDto(memoId, authorId);
+		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
+		GetOwnedMemoDto dto = new GetOwnedMemoDto(memoId, author);
 
-		when(memoRepository.findByIdAndAuthorId(memoId, authorId))
+		when(memoRepository.findByIdAndAuthor(memoId, author))
 			.thenReturn(Optional.empty());
 
 		//when && then

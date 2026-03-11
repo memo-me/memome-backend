@@ -34,7 +34,7 @@ public class MemoService {
 	}
 
 	public Memo getOwnedMemo(GetOwnedMemoDto dto) {
-		Memo memo = memoRepository.findByIdAndAuthorId(dto.getMemoId(), dto.getAuthorId())
+		Memo memo = memoRepository.findByIdAndAuthor(dto.getMemoId(), dto.getAuthor())
 			.orElseThrow(() -> new NoSuchElementException("Memo not found with id: " + dto.getMemoId()));
 		return memo;
 	}
