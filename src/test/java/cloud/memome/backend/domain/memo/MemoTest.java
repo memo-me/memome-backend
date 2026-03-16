@@ -122,7 +122,7 @@ class MemoTest {
 		Memo memo = Memo.create(title, body, author);
 
 		//when
-		memo.update(updatedTitle, updatedBody, author.getId());
+		memo.update(updatedTitle, updatedBody, author);
 
 		//then
 		Assertions.assertThat(memo.getTitle()).isEqualTo(updatedTitle);
@@ -146,7 +146,7 @@ class MemoTest {
 		Memo memo = Memo.create(title, body, author);
 
 		//when && then
-		Assertions.assertThatThrownBy(() -> memo.update(updatedTitle, updatedBody, author.getId()))
+		Assertions.assertThatThrownBy(() -> memo.update(updatedTitle, updatedBody, author))
 			.isInstanceOf(IllegalArgumentException.class);
 	}
 
@@ -165,7 +165,7 @@ class MemoTest {
 		Memo memo = Memo.create(title, body, author);
 
 		//when && then
-		Assertions.assertThatThrownBy(() -> memo.update(updatedTitle, updatedBody, author.getId()))
+		Assertions.assertThatThrownBy(() -> memo.update(updatedTitle, updatedBody, author))
 			.isInstanceOf(IllegalArgumentException.class);
 	}
 
@@ -184,7 +184,7 @@ class MemoTest {
 		Memo memo = Memo.create(title, body, author);
 
 		//when && then
-		Assertions.assertThatThrownBy(() -> memo.update(updatedTitle, updatedBody, author.getId()))
+		Assertions.assertThatThrownBy(() -> memo.update(updatedTitle, updatedBody, author))
 			.isInstanceOf(IllegalArgumentException.class);
 	}
 
@@ -203,7 +203,7 @@ class MemoTest {
 		Memo memo = Memo.create(title, body, author);
 
 		//when && then
-		Assertions.assertThatThrownBy(() -> memo.update(updatedTitle, updatedBody, author.getId()))
+		Assertions.assertThatThrownBy(() -> memo.update(updatedTitle, updatedBody, author))
 			.isInstanceOf(IllegalArgumentException.class);
 	}
 

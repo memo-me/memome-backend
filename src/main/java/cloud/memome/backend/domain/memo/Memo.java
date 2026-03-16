@@ -54,9 +54,9 @@ public class Memo {
 			.build();
 	}
 
-	public void update(String title, String body, Long authorId) {
+	public void update(String title, String body, Member author) {
 		validateTitleAndBody(title, body);
-		assertAuthor(authorId);
+		assertAuthor(author.getId());
 		this.title = title;
 		this.body = body;
 		this.updatedAt = LocalDateTime.now();

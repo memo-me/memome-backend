@@ -1,7 +1,6 @@
 package cloud.memome.backend.application.memo;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,6 +9,7 @@ import cloud.memome.backend.application.memo.dto.CreateMemoDto;
 import cloud.memome.backend.application.memo.dto.GetOwnedMemoDto;
 import cloud.memome.backend.application.memo.dto.RemoveMemoDto;
 import cloud.memome.backend.application.memo.dto.UpdateMemoDto;
+import cloud.memome.backend.application.memo.exception.MemoNotFoundException;
 import cloud.memome.backend.domain.member.Member;
 import cloud.memome.backend.domain.memo.Memo;
 import cloud.memome.backend.domain.memo.MemoRepository;
@@ -27,15 +27,9 @@ public class MemoService {
 		return memoRepository.save(memo);
 	}
 
-	private Memo getMemoById(Long id) {
-		Memo memo = memoRepository.findById(id)
-			.orElseThrow(() -> new NoSuchElementException("Memo not found with id: " + id));
-		return memo;
-	}
-
 	public Memo getOwnedMemo(GetOwnedMemoDto dto) {
 		Memo memo = memoRepository.findByIdAndAuthor(dto.getMemoId(), dto.getAuthor())
-			.orElseThrow(() -> new NoSuchElementException("Memo not found with id: " + dto.getMemoId()));
+			.orElseThrow(() -> new MemoNotFoundException());
 		return memo;
 	}
 
@@ -45,15 +39,14 @@ public class MemoService {
 
 	@Transactional
 	public Memo updateMemo(UpdateMemoDto dto) {
-		Memo memo = this.getMemoById(dto.getMemoId());
-		memo.update(dto.getTitle(), dto.getBody(), dto.getAuthorId());
+		Memo memo = this.getOwnedMemo(new GetOwnedMemoDto(dto.getMemoId(), dto.getAuthor()));
+		memo.update(dto.getTitle(), dto.getBody(), dto.getAuthor());
 		return memo;
 	}
 
 	@Transactional
 	public void removeMemo(RemoveMemoDto dto) {
-		Memo memo = this.getMemoById(dto.getMemoId());
-		memo.assertAuthor(dto.getAuthorId());
+		Memo memo = this.getOwnedMemo(new GetOwnedMemoDto(dto.getMemoId(), dto.getAuthor()));
 		memoRepository.delete(memo);
 	}
 }

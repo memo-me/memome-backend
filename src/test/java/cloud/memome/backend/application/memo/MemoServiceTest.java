@@ -3,7 +3,6 @@ package cloud.memome.backend.application.memo;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import org.assertj.core.api.Assertions;
@@ -19,12 +18,12 @@ import cloud.memome.backend.application.memo.dto.CreateMemoDto;
 import cloud.memome.backend.application.memo.dto.GetOwnedMemoDto;
 import cloud.memome.backend.application.memo.dto.RemoveMemoDto;
 import cloud.memome.backend.application.memo.dto.UpdateMemoDto;
+import cloud.memome.backend.application.memo.exception.MemoNotFoundException;
 import cloud.memome.backend.domain.member.Member;
 import cloud.memome.backend.domain.member.OAuthIdentity;
 import cloud.memome.backend.domain.member.ProviderType;
 import cloud.memome.backend.domain.memo.Memo;
 import cloud.memome.backend.domain.memo.MemoRepository;
-import cloud.memome.backend.domain.memo.exception.NotMemoOwnerException;
 
 @ExtendWith(MockitoExtension.class)
 class MemoServiceTest {
@@ -91,7 +90,7 @@ class MemoServiceTest {
 
 		//when && then
 		Assertions.assertThatThrownBy(() -> memoService.getOwnedMemo(dto))
-			.isInstanceOf(NoSuchElementException.class);
+			.isInstanceOf(MemoNotFoundException.class);
 	}
 
 	@Test
@@ -134,12 +133,12 @@ class MemoServiceTest {
 		ReflectionTestUtils.setField(author, "id", authorId);
 
 		Memo memo = Memo.create(title, body, author);
-		when(memoRepository.findById(memoId))
+		when(memoRepository.findByIdAndAuthor(memoId, author))
 			.thenReturn(Optional.of(memo));
 
 		//when
 		Memo result = memoService.updateMemo(
-			new UpdateMemoDto(memoId, authorId, updatedTitle, updatedBody));
+			new UpdateMemoDto(memoId, author, updatedTitle, updatedBody));
 
 		//then
 		Assertions.assertThat(result).isNotNull();
@@ -152,70 +151,67 @@ class MemoServiceTest {
 	@DisplayName("다른 작성자의 메모 수정 - 실패")
 	public void update_memo_fail_when_not_mine() {
 		//given
-		String title = "memo title";
-		String body = "This is Memo body";
 		String updatedTitle = "memo title, updated";
 		String updatedBody = "This is Memo body, updated";
 
-		Long memoId = 1L;
-		Long authorId = 1L;
-		Long anotherAuthorId = 2L;
-
+		Long authorId = 3L;
 		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
 		ReflectionTestUtils.setField(author, "id", authorId);
 
-		Memo memo = Memo.create(title, body, author);
-		when(memoRepository.findById(memoId))
-			.thenReturn(Optional.of(memo));
+		Long notAuthorId = 2L;
+		Member notAuthor = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567891"), "nickname", "email");
+		ReflectionTestUtils.setField(notAuthor, "id", notAuthorId);
+
+		Long memoId = 1L;
+		when(memoRepository.findByIdAndAuthor(memoId, notAuthor))
+			.thenReturn(Optional.empty());
 
 		//when
 		Assertions.assertThatThrownBy(
-				() -> memoService.updateMemo(new UpdateMemoDto(memoId, anotherAuthorId, updatedTitle, updatedBody)))
-			.isInstanceOf(NotMemoOwnerException.class);
+				() -> memoService.updateMemo(new UpdateMemoDto(memoId, notAuthor, updatedTitle, updatedBody)))
+			.isInstanceOf(MemoNotFoundException.class);
 	}
 
 	@Test
 	@DisplayName("존재하지 않는 메모 수정 - 실패")
 	public void update_memo_fail_when_memo_not_found() {
 		//given
+		Long notExistMemoId = 1L;
 		String updatedTitle = "memo title, updated";
 		String updatedBody = "This is Memo body, updated";
 
-		Long authorId = 1L;
-		Long anotherMemoId = 2L;
-
-		when(memoRepository.findById(anotherMemoId))
+		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
+		when(memoRepository.findByIdAndAuthor(notExistMemoId, author))
 			.thenReturn(Optional.empty());
 
 		//when
 		Assertions.assertThatThrownBy(
-				() -> memoService.updateMemo(new UpdateMemoDto(anotherMemoId, authorId, updatedTitle, updatedBody)))
-			.isInstanceOf(NoSuchElementException.class);
+				() -> memoService.updateMemo(new UpdateMemoDto(notExistMemoId, author, updatedTitle, updatedBody)))
+			.isInstanceOf(MemoNotFoundException.class);
 	}
 
 	@Test
 	@DisplayName("메모 삭제 - 성공")
 	public void delete_memo_success() {
 		//given
-		String title = "memo title";
-		String body = "This is Memo body";
-
-		Long memoId = 1L;
 		Long authorId = 1L;
-
 		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
 		ReflectionTestUtils.setField(author, "id", authorId);
 
+		Long memoId = 1L;
+		String title = "memo title";
+		String body = "This is Memo body";
 		Memo memo = Memo.create(title, body, author);
-		when(memoRepository.findById(memoId))
+
+		when(memoRepository.findByIdAndAuthor(memoId, author))
 			.thenReturn(Optional.of(memo));
 
 		//when
 		memoService.removeMemo(
-			new RemoveMemoDto(memoId, authorId));
+			new RemoveMemoDto(memoId, author));
 
 		//then
-		verify(memoRepository).findById(memoId);
+		verify(memoRepository).findByIdAndAuthor(memoId, author);
 		verify(memoRepository).delete(memo);
 	}
 
@@ -223,26 +219,29 @@ class MemoServiceTest {
 	@DisplayName("다른 작성자의 메모 삭제 - 실패")
 	public void delete_memo_fail_when_not_mine() {
 		//given
-		String title = "memo title";
-		String body = "This is Memo body";
-
-		Long memoId = 1L;
 		Long authorId = 1L;
-		Long anotherAuthorId = 2L;
-
 		Member author = Member.create(
 			new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
 		ReflectionTestUtils.setField(author, "id", authorId);
 
+		Long notAuthorId = 2L;
+		Member notAuthor = Member.create(
+			new OAuthIdentity(ProviderType.GOOGLE, "1234567899"), "nickna2me", "email");
+		ReflectionTestUtils.setField(notAuthor, "id", notAuthorId);
+
+		Long memoId = 1L;
+		String title = "memo title";
+		String body = "This is Memo body";
 		Memo memo = Memo.create(title, body, author);
-		when(memoRepository.findById(memoId))
-			.thenReturn(Optional.of(memo));
+
+		when(memoRepository.findByIdAndAuthor(memoId, notAuthor))
+			.thenReturn(Optional.empty());
 
 		//when && then
-		Assertions.assertThatThrownBy(() -> memoService.removeMemo(new RemoveMemoDto(memoId, anotherAuthorId)))
-			.isInstanceOf(NotMemoOwnerException.class);
+		Assertions.assertThatThrownBy(() -> memoService.removeMemo(new RemoveMemoDto(memoId, notAuthor)))
+			.isInstanceOf(MemoNotFoundException.class);
 
-		verify(memoRepository).findById(memoId);
+		verify(memoRepository).findByIdAndAuthor(memoId, notAuthor);
 		verify(memoRepository, never()).delete(memo);
 	}
 
@@ -250,17 +249,21 @@ class MemoServiceTest {
 	@DisplayName("존재하지 않는 메모 삭제 - 실패")
 	public void delete_memo_fail_when_memo_not_found() {
 		//given
-		Long authorId = 1L;
-		Long anotherMemoId = 2L;
+		Long notExistMemoId = 1L;
 
-		when(memoRepository.findById(anotherMemoId))
+		Long authorId = 1L;
+		Member author = Member.create(
+			new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
+		ReflectionTestUtils.setField(author, "id", authorId);
+
+		when(memoRepository.findByIdAndAuthor(notExistMemoId, author))
 			.thenReturn(Optional.empty());
 
 		//when && then
-		Assertions.assertThatThrownBy(() -> memoService.removeMemo(new RemoveMemoDto(anotherMemoId, authorId)))
-			.isInstanceOf(NoSuchElementException.class);
+		Assertions.assertThatThrownBy(() -> memoService.removeMemo(new RemoveMemoDto(notExistMemoId, author)))
+			.isInstanceOf(MemoNotFoundException.class);
 
-		verify(memoRepository).findById(anotherMemoId);
+		verify(memoRepository).findByIdAndAuthor(notExistMemoId, author);
 		verify(memoRepository, never()).delete(any(Memo.class));
 	}
 }
