@@ -12,5 +12,5 @@ import cloud.memome.backend.domain.member.Member;
 public interface MemoRepository extends JpaRepository<Memo, Long> {
 	List<Memo> findAllByAuthor(Member author);
 
-	Optional<Memo> findByIdAndAuthorId(Long id, Long authorId);
+	Optional<Memo> findByIdAndAuthor(Long id, Member author);
 }

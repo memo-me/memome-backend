@@ -3,11 +3,9 @@ package cloud.memome.backend.api.member;
 import static org.hamcrest.Matchers.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.any;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -20,10 +18,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import cloud.memome.backend.api.OidcTestUtils;
 import cloud.memome.backend.application.member.MemberService;
 import cloud.memome.backend.application.member.dto.IdentityDto;
 import cloud.memome.backend.application.member.dto.UpdateMemberDto;
@@ -68,7 +66,8 @@ class MemberControllerTest {
 			.thenReturn(member);
 
 		//when & then
-		get_request_with_oidc("/members/me", oAuthIdentity)
+		mockMvc.perform(get("/members/me")
+				.with(OidcTestUtils.login(oAuthIdentity)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("nickname").value(nickname))
 			.andExpect(jsonPath("email").value(email));
@@ -86,7 +85,8 @@ class MemberControllerTest {
 		when(memberService.getMemberByIdentity(any(IdentityDto.class)))
 			.thenThrow(new InvalidAuthenticationException());
 
-		get_request_with_oidc("/members/me", invalidOAuthIdentity)
+		mockMvc.perform(get("/members/me")
+				.with(OidcTestUtils.login(invalidOAuthIdentity)))
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("type").value("about:blank"))
 			.andExpect(jsonPath("title").value("Unauthorized"))
@@ -118,7 +118,11 @@ class MemberControllerTest {
 		UpdateMemberDto dto = new UpdateMemberDto(updated_nickname, updated_email);
 
 		//when && then
-		put_request_with_oidc("/members/me", oAuthIdentity, dto)
+		mockMvc.perform(put("/members/me")
+				.with(OidcTestUtils.login(oAuthIdentity))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(dto))
+			)
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("nickname").value(updated_nickname))
 			.andExpect(jsonPath("email").value(updated_email))
@@ -144,7 +148,11 @@ class MemberControllerTest {
 		body.put("email", updated_email);
 
 		//when && then
-		put_request_with_oidc("/members/me", invalidOAuthIdentity, body)
+		mockMvc.perform(put("/members/me")
+				.with(OidcTestUtils.login(invalidOAuthIdentity))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(body))
+			)
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("type").value("about:blank"))
 			.andExpect(jsonPath("title").value("Unauthorized"))
@@ -169,7 +177,11 @@ class MemberControllerTest {
 		body.put("email", updated_email);
 
 		//when && then
-		put_request_with_oidc("/members/me", oAuthIdentity, body)
+		mockMvc.perform(put("/members/me")
+				.with(OidcTestUtils.login(oAuthIdentity))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(body))
+			)
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("type").value("about:blank"))
 			.andExpect(jsonPath("title").value("Bad Request"))
@@ -194,7 +206,11 @@ class MemberControllerTest {
 		body.put("email", updated_email);
 
 		//when && then
-		put_request_with_oidc("/members/me", oAuthIdentity, body)
+		mockMvc.perform(put("/members/me")
+				.with(OidcTestUtils.login(oAuthIdentity))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(body))
+			)
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("type").value("about:blank"))
 			.andExpect(jsonPath("title").value("Bad Request"))
@@ -219,7 +235,11 @@ class MemberControllerTest {
 		body.put("email", updated_email);
 
 		//when && then
-		put_request_with_oidc("/members/me", oAuthIdentity, body)
+		mockMvc.perform(put("/members/me")
+				.with(OidcTestUtils.login(oAuthIdentity))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(body))
+			)
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("type").value("about:blank"))
 			.andExpect(jsonPath("title").value("Bad Request"))
@@ -244,7 +264,11 @@ class MemberControllerTest {
 		body.put("email", updated_email);
 
 		//when && then
-		put_request_with_oidc("/members/me", oAuthIdentity, body)
+		mockMvc.perform(put("/members/me")
+				.with(OidcTestUtils.login(oAuthIdentity))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(body))
+			)
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("type").value("about:blank"))
 			.andExpect(jsonPath("title").value("Bad Request"))
@@ -269,7 +293,11 @@ class MemberControllerTest {
 		body.put("email", updated_email);
 
 		//when && then
-		put_request_with_oidc("/members/me", oAuthIdentity, body)
+		mockMvc.perform(put("/members/me")
+				.with(OidcTestUtils.login(oAuthIdentity))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(body))
+			)
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("type").value("about:blank"))
 			.andExpect(jsonPath("title").value("Bad Request"))
@@ -296,55 +324,13 @@ class MemberControllerTest {
 		doThrow(new InvalidAuthenticationException())
 			.when(memberService).removeMember(any(IdentityDto.class));
 
-		delete_request_with_oidc("/members/me", invalidOAuthIdentity)
+		mockMvc.perform(delete("/members/me")
+				.with(OidcTestUtils.login(invalidOAuthIdentity)))
 			.andExpect(status().isUnauthorized())
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("type").value("about:blank"))
 			.andExpect(jsonPath("title").value("Unauthorized"))
 			.andExpect(jsonPath("status").value(HttpStatus.UNAUTHORIZED.value()))
 			.andExpect(jsonPath("detail").exists());
-	}
-
-	private URL changeProviderTypeToURL(ProviderType type) {
-		URL url;
-		try {
-			url = new URL(type.getIssuer());
-		} catch (Exception e) {
-			throw new RuntimeException("WRONG URL FORMAT: " + type.getIssuer(), e);
-		}
-
-		return url;
-	}
-
-	private ResultActions get_request_with_oidc(String uri, OAuthIdentity oAuthIdentity) throws Exception {
-		return mockMvc.perform(get(uri)
-			.with(oidcLogin().idToken(token -> token.claims(claims -> {
-					claims.put("iss", changeProviderTypeToURL(oAuthIdentity.getProviderType()));
-					claims.put("sub", oAuthIdentity.getProviderId());
-				}))
-			)
-		);
-	}
-
-	private ResultActions put_request_with_oidc(String uri, OAuthIdentity oAuthIdentity, Object body) throws Exception {
-		return mockMvc.perform(put(uri)
-			.contentType(MediaType.APPLICATION_JSON)
-			.content(objectMapper.writeValueAsString(body))
-			.with(oidcLogin().idToken(token -> token.claims(claims -> {
-					claims.put("iss", changeProviderTypeToURL(oAuthIdentity.getProviderType()));
-					claims.put("sub", oAuthIdentity.getProviderId());
-				}))
-			)
-		);
-	}
-
-	private ResultActions delete_request_with_oidc(String uri, OAuthIdentity oAuthIdentity) throws Exception {
-		return mockMvc.perform(delete(uri)
-			.with(oidcLogin().idToken(token -> token.claims(claims -> {
-					claims.put("iss", changeProviderTypeToURL(oAuthIdentity.getProviderType()));
-					claims.put("sub", oAuthIdentity.getProviderId());
-				}))
-			)
-		);
 	}
 }

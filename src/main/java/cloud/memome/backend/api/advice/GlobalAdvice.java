@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import cloud.memome.backend.application.member.exception.InvalidAuthenticationException;
+import cloud.memome.backend.application.memo.exception.MemoNotFoundException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -43,6 +44,12 @@ public class GlobalAdvice {
 	public ResponseEntity<Object> invalidAuthenticationException(InvalidAuthenticationException exception) {
 		ProblemDetail body = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, exception.getMessage());
 		return createResponse(body, HttpHeaders.EMPTY, HttpStatus.UNAUTHORIZED);
+	}
+
+	@ExceptionHandler(MemoNotFoundException.class)
+	public ResponseEntity<Object> memoNotFoundException(MemoNotFoundException exception) {
+		ProblemDetail body = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
+		return createResponse(body, HttpHeaders.EMPTY, HttpStatus.NOT_FOUND);
 	}
 
 	private ResponseEntity<Object> createResponse(Object body, HttpHeaders headers, HttpStatusCode status) {
