@@ -18,6 +18,10 @@ public class MemoListResponse {
 
 	@Value
 	public static class MemoSummary {
+		private static final Integer SUMMARY_LEN = 10;
+		private static final String SUMMARY_ELLIPSIS = "...";
+		private static final Integer SUMMARY_PREFIX_LEN = SUMMARY_LEN - SUMMARY_ELLIPSIS.length();
+
 		Long id;
 		String title;
 		String bodySummary;
@@ -27,9 +31,15 @@ public class MemoListResponse {
 		public MemoSummary(Memo memo) {
 			this.id = memo.getId();
 			this.title = memo.getTitle();
-			this.bodySummary = memo.getBody().length() > 10 ? memo.getBody().substring(0, 7) + "..." : memo.getBody();
+			this.bodySummary = getSummary(memo.getBody());
 			this.createdAt = memo.getCreatedAt();
 			this.updatedAt = memo.getUpdatedAt();
+		}
+
+		private String getSummary(String body) {
+			return body.length() > SUMMARY_LEN
+				? body.substring(0, SUMMARY_LEN) + SUMMARY_ELLIPSIS
+				: body;
 		}
 	}
 }

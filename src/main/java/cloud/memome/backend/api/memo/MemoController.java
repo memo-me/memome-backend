@@ -51,7 +51,6 @@ public class MemoController {
 		return new MemoListResponse(memoSummaryList);
 	}
 
-	// GET /memos/{id} 특정 메모 얻기
 	@GetMapping("/{id}")
 	public GetMemoResponse getMemo(@Login LoginMember loginMember, @PathVariable Long id) {
 		Member currentLoginMember = memberService.getMemberByIdentity(
@@ -61,15 +60,14 @@ public class MemoController {
 		return GetMemoResponse.create(ownedMemo);
 	}
 
-	// POST /memos 새로운 메모 작성
 	@PostMapping
 	public GetMemoResponse writeNewMemo(@Login LoginMember loginMember,
 		@Validated @RequestBody WriteNewMemoRequest request) {
 		Member currentLoginMember = memberService.getMemberByIdentity(
 			new IdentityDto(loginMember.getProviderType(), loginMember.getProviderId()));
 
-		Memo newMemo = memoService.createNewMemo
-			(new CreateMemoDto(request.getTitle(), request.getBody(), currentLoginMember));
+		Memo newMemo = memoService.createNewMemo(
+			new CreateMemoDto(request.getTitle(), request.getBody(), currentLoginMember));
 
 		return GetMemoResponse.create(newMemo);
 	}

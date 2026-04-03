@@ -1,6 +1,8 @@
 package cloud.memome.backend.api.memo;
 
+import static org.hamcrest.Matchers.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -95,8 +97,8 @@ class MemoControllerTest {
 				OidcTestUtils.login(oAuthIdentity)
 			))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("count").value(0))
-			.andExpect(jsonPath("memoSummaryList").isEmpty());
+			.andExpect(jsonPath("$.count").value(0))
+			.andExpect(jsonPath("$.memoSummaryList").isEmpty());
 	}
 
 	@Test
@@ -128,11 +130,11 @@ class MemoControllerTest {
 				OidcTestUtils.login(oAuthIdentity)
 			))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("id").value(memo1.getId()))
-			.andExpect(jsonPath("title").value(memo1.getTitle()))
-			.andExpect(jsonPath("body").value(memo1.getBody()))
-			.andExpect(jsonPath("createdAt").exists())
-			.andExpect(jsonPath("updatedAt").exists());
+			.andExpect(jsonPath("$.id").value(memo1.getId()))
+			.andExpect(jsonPath("$.title").value(memo1.getTitle()))
+			.andExpect(jsonPath("$.body").value(memo1.getBody()))
+			.andExpect(jsonPath("$.createdAt").exists())
+			.andExpect(jsonPath("$.updatedAt").exists());
 	}
 
 	@Test
@@ -152,10 +154,10 @@ class MemoControllerTest {
 		mockMvc.perform(get("/memos/{id}", memoIdNotMine).with(
 				OidcTestUtils.login(oAuthIdentity)))
 			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("type").value("about:blank"))
-			.andExpect(jsonPath("title").value("Not Found"))
-			.andExpect(jsonPath("status").value(HttpStatus.NOT_FOUND.value()))
-			.andExpect(jsonPath("detail").exists());
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Not Found"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
+			.andExpect(jsonPath("$.detail").exists());
 	}
 
 	@Test
@@ -175,10 +177,10 @@ class MemoControllerTest {
 		mockMvc.perform(get("/memos/{id}", notExistMemoId).with(
 				OidcTestUtils.login(oAuthIdentity)))
 			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("type").value("about:blank"))
-			.andExpect(jsonPath("title").value("Not Found"))
-			.andExpect(jsonPath("status").value(HttpStatus.NOT_FOUND.value()))
-			.andExpect(jsonPath("detail").exists());
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Not Found"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
+			.andExpect(jsonPath("$.detail").exists());
 	}
 
 	@Test
@@ -218,11 +220,11 @@ class MemoControllerTest {
 			)
 			.andExpectAll(
 				status().isOk(),
-				jsonPath("id").value(updatedMemo.getId()),
-				jsonPath("title").value(updatedMemo.getTitle()),
-				jsonPath("body").value(updatedMemo.getBody()),
-				jsonPath("createdAt").exists(),
-				jsonPath("updatedAt").exists()
+				jsonPath("$.id").value(updatedMemo.getId()),
+				jsonPath("$.title").value(updatedMemo.getTitle()),
+				jsonPath("$.body").value(updatedMemo.getBody()),
+				jsonPath("$.createdAt").exists(),
+				jsonPath("$.updatedAt").exists()
 			);
 	}
 
@@ -251,10 +253,10 @@ class MemoControllerTest {
 				.content(objectMapper.writeValueAsString(request))
 			)
 			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("type").value("about:blank"))
-			.andExpect(jsonPath("title").value("Not Found"))
-			.andExpect(jsonPath("status").value(HttpStatus.NOT_FOUND.value()))
-			.andExpect(jsonPath("detail").exists());
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Not Found"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
+			.andExpect(jsonPath("$.detail").exists());
 	}
 
 	@Test
@@ -284,10 +286,10 @@ class MemoControllerTest {
 				.content(objectMapper.writeValueAsString(request))
 			)
 			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("type").value("about:blank"))
-			.andExpect(jsonPath("title").value("Not Found"))
-			.andExpect(jsonPath("status").value(HttpStatus.NOT_FOUND.value()))
-			.andExpect(jsonPath("detail").exists());
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Not Found"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
+			.andExpect(jsonPath("$.detail").exists());
 	}
 
 	@Test
@@ -308,10 +310,10 @@ class MemoControllerTest {
 				.content(objectMapper.writeValueAsString(request))
 			)
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("type").value("about:blank"))
-			.andExpect(jsonPath("title").value("Bad Request"))
-			.andExpect(jsonPath("status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.errors[*].field").value("title"))
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Bad Request"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.errors[*].field").value(hasItem("title")))
 			.andExpect(jsonPath("$.errors[*].message").exists());
 	}
 
@@ -333,10 +335,10 @@ class MemoControllerTest {
 				.content(objectMapper.writeValueAsString(request))
 			)
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("type").value("about:blank"))
-			.andExpect(jsonPath("title").value("Bad Request"))
-			.andExpect(jsonPath("status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.errors[*].field").value("title"))
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Bad Request"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.errors[*].field").value(hasItem("title")))
 			.andExpect(jsonPath("$.errors[*].message").exists());
 	}
 
@@ -358,10 +360,10 @@ class MemoControllerTest {
 				.content(objectMapper.writeValueAsString(request))
 			)
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("type").value("about:blank"))
-			.andExpect(jsonPath("title").value("Bad Request"))
-			.andExpect(jsonPath("status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.errors[*].field").value("body"))
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Bad Request"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.errors[*].field").value(hasItem("body")))
 			.andExpect(jsonPath("$.errors[*].message").exists());
 	}
 
@@ -383,16 +385,16 @@ class MemoControllerTest {
 				.content(objectMapper.writeValueAsString(request))
 			)
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("type").value("about:blank"))
-			.andExpect(jsonPath("title").value("Bad Request"))
-			.andExpect(jsonPath("status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.errors[*].field").value("body"))
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Bad Request"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.errors[*].field").value(hasItem("body")))
 			.andExpect(jsonPath("$.errors[*].message").exists());
 	}
 
 	@Test
 	@DisplayName("DELETE /memos/{id}: 비로그인 상태 접근 시 실패")
-	public void deleteMEmo_when_unauthorized() throws Exception {
+	public void deleteMemo_when_unauthorized() throws Exception {
 		Long memoId = 1L;
 
 		//when && then
@@ -410,7 +412,7 @@ class MemoControllerTest {
 		Member author = Member.create(oAuthIdentity, "nickname", "email@email.com");
 		Long memoId = 1L;
 
-		when(memberService.getMemberByIdentity(any(IdentityDto.class)))
+		when(memberService.getMemberByIdentity(any()))
 			.thenReturn(author);
 		doNothing()
 			.when(memoService).removeMemo(any(RemoveMemoDto.class));
@@ -439,10 +441,10 @@ class MemoControllerTest {
 		mockMvc.perform(delete("/memos/{id}", memoId).with(
 				OidcTestUtils.login(oAuthIdentity)))
 			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("type").value("about:blank"))
-			.andExpect(jsonPath("title").value("Not Found"))
-			.andExpect(jsonPath("status").value(HttpStatus.NOT_FOUND.value()))
-			.andExpect(jsonPath("detail").exists());
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Not Found"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
+			.andExpect(jsonPath("$.detail").exists());
 	}
 
 	@Test
@@ -462,9 +464,9 @@ class MemoControllerTest {
 		mockMvc.perform(delete("/memos/{id}", memoId).with(
 				OidcTestUtils.login(oAuthIdentity)))
 			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("type").value("about:blank"))
-			.andExpect(jsonPath("title").value("Not Found"))
-			.andExpect(jsonPath("status").value(HttpStatus.NOT_FOUND.value()))
-			.andExpect(jsonPath("detail").exists());
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Not Found"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
+			.andExpect(jsonPath("$.detail").exists());
 	}
 }

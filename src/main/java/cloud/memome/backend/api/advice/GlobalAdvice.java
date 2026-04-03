@@ -47,7 +47,7 @@ public class GlobalAdvice {
 	}
 
 	@ExceptionHandler(MemoNotFoundException.class)
-	public ResponseEntity<Object> noSuchElementException(MemoNotFoundException exception) {
+	public ResponseEntity<Object> memoNotFoundException(MemoNotFoundException exception) {
 		ProblemDetail body = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
 		return createResponse(body, HttpHeaders.EMPTY, HttpStatus.NOT_FOUND);
 	}

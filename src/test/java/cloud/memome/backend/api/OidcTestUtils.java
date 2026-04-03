@@ -7,7 +7,10 @@ import java.net.URL;
 import cloud.memome.backend.domain.member.OAuthIdentity;
 import cloud.memome.backend.domain.member.ProviderType;
 
-public class OidcTestUtils {
+public final class OidcTestUtils {
+	private OidcTestUtils() {
+	}
+
 	public static OidcLoginRequestPostProcessor login(OAuthIdentity oAuthIdentity) {
 		return oidcLogin().idToken(token -> token.claims(claims -> {
 			claims.put("iss", changeProviderTypeToURL(oAuthIdentity.getProviderType()));
