@@ -56,6 +56,7 @@ public class Memo {
 
 	public void update(String title, String body, Member author) {
 		validateTitleAndBody(title, body);
+		validateAuthor(author);
 		assertAuthor(author.getId());
 		this.title = title;
 		this.body = body;

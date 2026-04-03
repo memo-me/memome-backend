@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import cloud.memome.backend.api.OidcTestUtils;
 import cloud.memome.backend.api.memo.request.ModifyMemoRequest;
+import cloud.memome.backend.api.memo.request.WriteNewMemoRequest;
 import cloud.memome.backend.application.member.MemberService;
 import cloud.memome.backend.application.member.dto.IdentityDto;
 import cloud.memome.backend.application.memo.MemoService;
@@ -181,6 +182,151 @@ class MemoControllerTest {
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
 			.andExpect(jsonPath("$.detail").exists());
+	}
+
+	@Test
+	@DisplayName("POST /memos: 비로그인 상태 접근 401")
+	public void writeMemo_fail_when_unauthorized() throws Exception {
+		//given
+		Long memoId = 1L;
+
+		//when & then
+		mockMvc.perform(post("/memos"))
+			.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	@DisplayName("POST /memos: 메모 작성 성공")
+	public void writeMemo_success() throws Exception {
+		//given
+		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
+		Member member = Member.create(oAuthIdentity, "nickname", "email@email.com");
+
+		Long memoId = 1L;
+
+		WriteNewMemoRequest request = new WriteNewMemoRequest("new title", "new content");
+		Memo createdMemo = Memo.create(request.getTitle(), request.getBody(), member);
+		ReflectionTestUtils.setField(createdMemo, "id", memoId);
+
+		when(memberService.getMemberByIdentity(any()))
+			.thenReturn(member);
+		when(memoService.createNewMemo(any()))
+			.thenReturn(createdMemo);
+
+		//when & then
+		mockMvc.perform(post("/memos")
+				.with(OidcTestUtils.login(oAuthIdentity))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request))
+			)
+			.andExpectAll(
+				status().isOk(),
+				jsonPath("$.id").value(createdMemo.getId()),
+				jsonPath("$.title").value(createdMemo.getTitle()),
+				jsonPath("$.body").value(createdMemo.getBody()),
+				jsonPath("$.createdAt").exists(),
+				jsonPath("$.updatedAt").exists()
+			);
+	}
+
+	@Test
+	@DisplayName("POST /memos: 메모 제목을 null로 작성 시 실패")
+	public void writeMemo_fail_when_title_is_null() throws Exception {
+		//given
+		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
+		Member author = Member.create(oAuthIdentity, "nickname", "email@email.com");
+
+		Long memoId = 1L;
+
+		WriteNewMemoRequest request = new WriteNewMemoRequest(null, "created content");
+
+		//when & then
+		mockMvc.perform(post("/memos")
+				.with(OidcTestUtils.login(author.getOAuthIdentity()))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request))
+			)
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Bad Request"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.errors[*].field").value(hasItem("title")))
+			.andExpect(jsonPath("$.errors[*].message").exists());
+	}
+
+	@Test
+	@DisplayName("POST /memos: 메모 제목을 빈문자열로 작성 시 실패")
+	public void writeMemo_fail_when_title_is_empty() throws Exception {
+		//given
+		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
+		Member author = Member.create(oAuthIdentity, "nickname", "email@email.com");
+
+		Long memoId = 1L;
+
+		WriteNewMemoRequest request = new WriteNewMemoRequest("     ", "created content");
+
+		//when & then
+		mockMvc.perform(post("/memos")
+				.with(OidcTestUtils.login(author.getOAuthIdentity()))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request))
+			)
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Bad Request"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.errors[*].field").value(hasItem("title")))
+			.andExpect(jsonPath("$.errors[*].message").exists());
+	}
+
+	@Test
+	@DisplayName("POST /memos: 메모 본문을 null로 작성 시 실패")
+	public void writeMemo_fail_when_body_is_null() throws Exception {
+		//given
+		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
+		Member author = Member.create(oAuthIdentity, "nickname", "email@email.com");
+
+		Long memoId = 1L;
+
+		WriteNewMemoRequest request = new WriteNewMemoRequest("created title", null);
+
+		//when & then
+		mockMvc.perform(post("/memos")
+				.with(OidcTestUtils.login(author.getOAuthIdentity()))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request))
+			)
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Bad Request"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.errors[*].field").value(hasItem("body")))
+			.andExpect(jsonPath("$.errors[*].message").exists());
+	}
+
+	@Test
+	@DisplayName("POST /memos: 메모 본문을 빈문자열로 작성 시 실패")
+	public void writeMemo_fail_when_body_is_empty() throws Exception {
+		//given
+		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
+		Member author = Member.create(oAuthIdentity, "nickname", "email@email.com");
+
+		Long memoId = 1L;
+
+		WriteNewMemoRequest request = new WriteNewMemoRequest("created title", "         ");
+
+		//when & then
+		mockMvc.perform(post("/memos")
+				.with(OidcTestUtils.login(author.getOAuthIdentity()))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request))
+			)
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Bad Request"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.errors[*].field").value(hasItem("body")))
+			.andExpect(jsonPath("$.errors[*].message").exists());
 	}
 
 	@Test
