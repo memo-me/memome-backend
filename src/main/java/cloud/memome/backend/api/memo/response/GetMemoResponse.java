@@ -6,7 +6,7 @@ import cloud.memome.backend.domain.memo.Memo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Value;
 
-@Schema(description = "특정 메모의 세부 정보 조회 요청 DTO")
+@Schema(description = "특정 메모의 세부 정보 조회 응답 DTO")
 @Value
 public class GetMemoResponse {
 	@Schema(description = "메모의 아이디", example = "24")

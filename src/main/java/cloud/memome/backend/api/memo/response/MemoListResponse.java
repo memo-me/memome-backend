@@ -8,10 +8,10 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Value;
 
-@Schema(description = "현재 로그인한 사용자가 작성한 모든 메모 리스트 조회 요청 DTO")
+@Schema(description = "현재 로그인한 사용자가 작성한 모든 메모 리스트 조회 응답 DTO")
 @Value
 public class MemoListResponse {
-	@Schema(description = "현재 로그인한 사용자가 작성한 모든 메모의 갯수", example = "3")
+	@Schema(description = "현재 로그인한 사용자가 작성한 모든 메모의 개수", example = "3")
 	int count;
 
 	@ArraySchema(

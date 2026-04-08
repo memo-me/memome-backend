@@ -15,7 +15,6 @@ public class SwaggerConfig {
 	public OpenAPI openAPI() {
 		Info info = new Info()
 			.title("MemoMe 서비스 API 명세서")
-			.description("사용자 서비스 API 명세서")
 			.version("V1.0");
 
 		//-------------------- 인가 방식 지정 ---------------------
