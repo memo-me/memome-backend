@@ -22,8 +22,10 @@ public class AuthConfig {
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
 		return httpSecurity
+			.csrf(AbstractHttpConfigurer::disable)
 			.authorizeHttpRequests(request -> request
-				.requestMatchers("/error/**").permitAll()
+				.requestMatchers("/error/**", "/swagger-ui/**",
+					"/v3/api-docs/**", "/oauth2/**").permitAll()
 				.anyRequest().authenticated()
 			)
 			.oauth2Login(oauth2 -> oauth2
