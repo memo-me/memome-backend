@@ -22,7 +22,6 @@ import cloud.memome.backend.api.memo.request.WriteNewMemoRequest;
 import cloud.memome.backend.api.memo.response.GetMemoResponse;
 import cloud.memome.backend.api.memo.response.MemoListResponse;
 import cloud.memome.backend.application.member.MemberService;
-import cloud.memome.backend.application.member.dto.IdentityDto;
 import cloud.memome.backend.application.memo.MemoService;
 import cloud.memome.backend.application.memo.dto.CreateMemoDto;
 import cloud.memome.backend.application.memo.dto.GetOwnedMemoDto;
@@ -57,8 +56,7 @@ public class MemoController {
 	})
 	@GetMapping
 	public MemoListResponse getMemoSummaryList(@Login LoginMember loginMember) {
-		Member currentLoginMember = memberService.getMemberByIdentity(
-			new IdentityDto(loginMember.getProviderType(), loginMember.getProviderId()));
+		Member currentLoginMember = memberService.getMemberById(loginMember.getId());
 
 		List<MemoListResponse.MemoSummary> memoSummaryList = memoService.getOwnedMemosAll(currentLoginMember)
 			.stream()
@@ -79,8 +77,7 @@ public class MemoController {
 	@Parameter(name = "id", in = ParameterIn.PATH, description = "메모 아이디")
 	@GetMapping("/{id}")
 	public GetMemoResponse getMemo(@Login LoginMember loginMember, @PathVariable("id") Long id) {
-		Member currentLoginMember = memberService.getMemberByIdentity(
-			new IdentityDto(loginMember.getProviderType(), loginMember.getProviderId()));
+		Member currentLoginMember = memberService.getMemberById(loginMember.getId());
 
 		Memo ownedMemo = memoService.getOwnedMemo(new GetOwnedMemoDto(id, currentLoginMember));
 		return GetMemoResponse.create(ownedMemo);
@@ -98,8 +95,7 @@ public class MemoController {
 	@PostMapping
 	public GetMemoResponse writeNewMemo(@Login LoginMember loginMember,
 		@Validated @RequestBody WriteNewMemoRequest request) {
-		Member currentLoginMember = memberService.getMemberByIdentity(
-			new IdentityDto(loginMember.getProviderType(), loginMember.getProviderId()));
+		Member currentLoginMember = memberService.getMemberById(loginMember.getId());
 
 		Memo newMemo = memoService.createNewMemo(
 			new CreateMemoDto(request.getTitle(), request.getBody(), currentLoginMember));
@@ -119,8 +115,7 @@ public class MemoController {
 	@PutMapping("/{id}")
 	public GetMemoResponse modifyMemo(@Login LoginMember loginMember, @PathVariable("id") Long memoId,
 		@Validated @RequestBody ModifyMemoRequest request) {
-		Member currentLoginMember = memberService.getMemberByIdentity(
-			new IdentityDto(loginMember.getProviderType(), loginMember.getProviderId()));
+		Member currentLoginMember = memberService.getMemberById(loginMember.getId());
 
 		Memo memo = memoService.updateMemo(
 			new UpdateMemoDto(memoId, currentLoginMember, request.getTitle(), request.getBody()));
@@ -139,8 +134,7 @@ public class MemoController {
 	@DeleteMapping("/{id}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void deleteMemo(@Login LoginMember loginMember, @PathVariable("id") Long memoId) {
-		Member currentLoginMember = memberService.getMemberByIdentity(
-			new IdentityDto(loginMember.getProviderType(), loginMember.getProviderId()));
+		Member currentLoginMember = memberService.getMemberById(loginMember.getId());
 
 		memoService.removeMemo(new RemoveMemoDto(memoId, currentLoginMember));
 	}

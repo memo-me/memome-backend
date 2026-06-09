@@ -7,6 +7,7 @@ import cloud.memome.backend.application.member.dto.IdentityDto;
 import cloud.memome.backend.application.member.dto.OAuthUserInfo;
 import cloud.memome.backend.application.member.dto.UpdateMemberDto;
 import cloud.memome.backend.application.member.exception.InvalidAuthenticationException;
+import cloud.memome.backend.application.member.exception.NoSuchMemberException;
 import cloud.memome.backend.domain.member.Member;
 import cloud.memome.backend.domain.member.MemberRepository;
 import cloud.memome.backend.domain.member.OAuthIdentity;
@@ -32,6 +33,11 @@ public class MemberService {
 			.orElseThrow(() -> new InvalidAuthenticationException());
 	}
 
+	public Member getMemberById(Long id) {
+		return memberRepository.findById(id)
+			.orElseThrow(() -> new NoSuchMemberException());
+	}
+
 	@Transactional
 	public Member updateMember(IdentityDto identityDto, UpdateMemberDto dto) {
 		Member member = this.getMemberByIdentity(identityDto);
@@ -40,8 +46,21 @@ public class MemberService {
 	}
 
 	@Transactional
+	public Member updateMember(Long id, UpdateMemberDto dto) {
+		Member member = this.getMemberById(id);
+		member.updateMember(dto.getNickname(), dto.getEmail());
+		return member;
+	}
+
+	@Transactional
 	public void removeMember(IdentityDto identityDto) {
 		Member member = this.getMemberByIdentity(identityDto);
+		memberRepository.delete(member);
+	}
+
+	@Transactional
+	public void removeMember(Long id) {
+		Member member = this.getMemberById(id);
 		memberRepository.delete(member);
 	}
 }

@@ -1,9 +1,9 @@
 package cloud.memome.backend.infra.mvc;
 
 import org.springframework.core.MethodParameter;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
@@ -11,9 +11,7 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 
 import cloud.memome.backend.api.auth.Login;
 import cloud.memome.backend.api.auth.LoginMember;
-import cloud.memome.backend.application.member.dto.OAuthUserInfo;
 import cloud.memome.backend.infra.security.exception.UnauthenticatedException;
-import cloud.memome.backend.infra.security.oidc.OAuthUserInfoResolver;
 
 public class LoginMemberArgumentResolver implements HandlerMethodArgumentResolver {
 	@Override
@@ -27,16 +25,12 @@ public class LoginMemberArgumentResolver implements HandlerMethodArgumentResolve
 	public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
 		NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		if (authentication == null) {
+		if (authentication == null || authentication.getPrincipal() == null
+			|| !(authentication instanceof UsernamePasswordAuthenticationToken
+			&& authentication.getPrincipal() instanceof Long)) {
 			throw new UnauthenticatedException();
 		}
 
-		Object principal = authentication.getPrincipal();
-		if (!(principal instanceof OAuth2User)) {
-			throw new UnauthenticatedException();
-		}
-
-		OAuthUserInfo result = OAuthUserInfoResolver.resolve(((OAuth2User)principal).getAttributes());
-		return new LoginMember(result.getProviderType(), result.getProviderId());
+		return new LoginMember((Long)authentication.getPrincipal());
 	}
 }

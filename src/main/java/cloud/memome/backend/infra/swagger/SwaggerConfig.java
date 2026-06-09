@@ -18,6 +18,7 @@ public class SwaggerConfig {
 			.version("V1.0");
 
 		//-------------------- 인가 방식 지정 ---------------------
+		//TODO: 변경해야함.
 		SecurityScheme auth = new SecurityScheme()
 			.type(SecurityScheme.Type.APIKEY).in(SecurityScheme.In.COOKIE).name("JSESSIONID");
 		SecurityRequirement securityRequirement = new SecurityRequirement().addList("basicAuth");

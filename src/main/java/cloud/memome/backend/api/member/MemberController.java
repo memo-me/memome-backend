@@ -16,7 +16,6 @@ import cloud.memome.backend.api.auth.LoginMember;
 import cloud.memome.backend.api.member.request.UpdateMyInfoRequest;
 import cloud.memome.backend.api.member.response.MyInfoResponse;
 import cloud.memome.backend.application.member.MemberService;
-import cloud.memome.backend.application.member.dto.IdentityDto;
 import cloud.memome.backend.application.member.dto.UpdateMemberDto;
 import cloud.memome.backend.domain.member.Member;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,8 +42,7 @@ public class MemberController {
 	})
 	@GetMapping("/me")
 	public MyInfoResponse getAccount(@Login LoginMember loginMember) {
-		Member member = memberService.getMemberByIdentity(
-			new IdentityDto(loginMember.getProviderType(), loginMember.getProviderId()));
+		Member member = memberService.getMemberById(loginMember.getId());
 		return MyInfoResponse.create(member);
 	}
 
@@ -60,8 +58,7 @@ public class MemberController {
 	@PutMapping("/me")
 	public MyInfoResponse updateAccount(@Login LoginMember loginMember,
 		@Validated @RequestBody UpdateMyInfoRequest updateMyInfoReq) {
-		Member member = memberService.updateMember(
-			new IdentityDto(loginMember.getProviderType(), loginMember.getProviderId()),
+		Member member = memberService.updateMember(loginMember.getId(),
 			new UpdateMemberDto(updateMyInfoReq.getNickname(), updateMyInfoReq.getEmail()));
 		return MyInfoResponse.create(member);
 	}
@@ -75,6 +72,6 @@ public class MemberController {
 	@DeleteMapping("/me")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void deleteAccount(@Login LoginMember loginMember) {
-		memberService.removeMember(new IdentityDto(loginMember.getProviderType(), loginMember.getProviderId()));
+		memberService.removeMember(loginMember.getId());
 	}
 }
