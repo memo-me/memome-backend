@@ -13,18 +13,18 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 public class SwaggerConfig {
 	@Bean
 	public OpenAPI openAPI() {
-		Info info = new Info()
-			.title("MemoMe 서비스 API 명세서")
-			.version("V1.0");
+		Info info = new Info().title("Memome 서비스 API 명세서")
+			.description("This is How API")
+			.version("v0.0.1");
 
 		//-------------------- 인가 방식 지정 ---------------------
-		//TODO: 변경해야함.
-		SecurityScheme auth = new SecurityScheme()
-			.type(SecurityScheme.Type.APIKEY).in(SecurityScheme.In.COOKIE).name("JSESSIONID");
-		SecurityRequirement securityRequirement = new SecurityRequirement().addList("basicAuth");
-		return new OpenAPI()
-			.components(new Components().addSecuritySchemes("basicAuth", auth))
-			.addSecurityItem(securityRequirement)
+		SecurityRequirement jwt = new SecurityRequirement().addList("JWT");
+		SecurityScheme keyScheme = new SecurityScheme().type(SecurityScheme.Type.HTTP)
+			.bearerFormat("JWT")
+			.scheme("bearer");
+
+		return new OpenAPI().addSecurityItem(jwt)
+			.components(new Components().addSecuritySchemes("JWT", keyScheme))
 			.info(info);
 	}
 }
