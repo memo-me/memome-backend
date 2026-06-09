@@ -12,6 +12,10 @@ public enum TokenType {
 		this.duraion = duraion;
 	}
 
+	public Long getDurationToSec() {
+		return this.duraion.toSeconds();
+	}
+
 	public Long getDurationToMilli() {
 		return this.duraion.toMillis();
 	}

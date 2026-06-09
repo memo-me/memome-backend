@@ -17,6 +17,7 @@ import org.springframework.security.web.authentication.logout.LogoutFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import cloud.memome.backend.application.auth.RefreshTokenService;
 import cloud.memome.backend.application.member.MemberService;
 import cloud.memome.backend.infra.security.jwt.JwtFilter;
 import cloud.memome.backend.infra.security.jwt.JwtProvider;
@@ -29,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AuthConfig {
 	private final MemberService memberService;
+	private final RefreshTokenService refreshTokenService;
 	private final JwtProvider jwtProvider;
 
 	@Bean
@@ -40,7 +42,7 @@ public class AuthConfig {
 				.configurationSource(corsConfigurationSource()))
 			// .logout()
 			.oauth2Login(oauth2 -> oauth2
-				.successHandler(new OidcSuccessHandler(jwtProvider))
+				.successHandler(new OidcSuccessHandler(jwtProvider, refreshTokenService))
 				.userInfoEndpoint(userinfo -> userinfo
 					.oidcUserService(oidcUserService())))
 			.formLogin(AbstractHttpConfigurer::disable)
@@ -51,7 +53,7 @@ public class AuthConfig {
 				.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
 			.authorizeHttpRequests(request -> request
 				.requestMatchers("/error/**", "/swagger-ui/**",
-					"/v3/api-docs/**", "/oauth2/**").permitAll()
+					"/v3/api-docs/**", "/oauth2/**", "/auth/refresh").permitAll()
 				.anyRequest().authenticated()
 			)
 			.build();
