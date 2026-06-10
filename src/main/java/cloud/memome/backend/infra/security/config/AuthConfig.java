@@ -13,6 +13,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.authentication.logout.LogoutFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -20,6 +21,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import cloud.memome.backend.application.auth.RefreshTokenService;
 import cloud.memome.backend.application.member.MemberService;
 import cloud.memome.backend.infra.security.jwt.JwtFilter;
+import cloud.memome.backend.infra.security.jwt.JwtLogoutHandler;
 import cloud.memome.backend.infra.security.jwt.JwtProvider;
 import cloud.memome.backend.infra.security.oidc.MyOidcService;
 import cloud.memome.backend.infra.security.oidc.OidcSuccessHandler;
@@ -36,11 +38,13 @@ public class AuthConfig {
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
 		return httpSecurity
-			.addFilterAfter(new JwtFilter(jwtProvider), LogoutFilter.class)
+			.addFilterBefore(new JwtFilter(jwtProvider), LogoutFilter.class)
 			.csrf(AbstractHttpConfigurer::disable)
 			.cors(cors -> cors
 				.configurationSource(corsConfigurationSource()))
-			// .logout()
+			.logout(logout -> logout
+				.addLogoutHandler(new JwtLogoutHandler(jwtProvider, refreshTokenService))
+				.logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.OK)))
 			.oauth2Login(oauth2 -> oauth2
 				.successHandler(new OidcSuccessHandler(jwtProvider, refreshTokenService))
 				.userInfoEndpoint(userinfo -> userinfo

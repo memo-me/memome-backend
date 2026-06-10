@@ -26,9 +26,6 @@ public class OidcSuccessHandler implements AuthenticationSuccessHandler {
 		LoginMemberOidcUser oidcUser = (LoginMemberOidcUser)authentication.getPrincipal();
 		Long memberId = oidcUser.getMemberId();
 
-		String accessToken = jwtProvider.createJwt(new CreateJwtDto(memberId, TokenType.ACCESS));
-		response.setHeader("Authorization", "Bearer " + accessToken);
-
 		String refreshToken = jwtProvider.createJwt(new CreateJwtDto(memberId, TokenType.REFRESH));
 		refreshTokenService.saveRefreshToken(memberId, refreshToken);
 
@@ -38,5 +35,7 @@ public class OidcSuccessHandler implements AuthenticationSuccessHandler {
 		refresh.setAttribute("SameSite", "Strict");
 		refresh.setPath("/");
 		response.addCookie(refresh);
+
+		response.sendRedirect("http://localhost:63342/memome-backend/index.html");
 	}
 }
