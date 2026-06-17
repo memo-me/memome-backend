@@ -49,4 +49,9 @@ public class MemoService {
 		Memo memo = this.getOwnedMemo(new GetOwnedMemoDto(dto.getMemoId(), dto.getAuthor()));
 		memoRepository.delete(memo);
 	}
+
+	@Transactional
+	public void removeOwnedMemo(Long id) {
+		memoRepository.deleteAllByAuthorId(id);
+	}
 }
