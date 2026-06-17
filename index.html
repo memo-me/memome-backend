@@ -23,7 +23,7 @@
         });
 
         const body = await response.json();
-        bb.innerText = JSON.stringify(data);
+        bb.innerText = JSON.stringify(body);
     }
 
     async function clickRefresh(btnId) {
@@ -52,7 +52,6 @@
         const refreshResponse = await fetch("http://localhost:8080/auth/refresh", {
                 credentials: 'include'});
         const body = await refreshResponse.text();
-        console.log(`success {body}`);
         sessionStorage.setItem("accessToken", body);
         options['headers'] = `Bearer ${sessionStorage.getItem("accessToken")}`;
         return await fetch(url, options);

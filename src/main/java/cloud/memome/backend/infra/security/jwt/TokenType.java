@@ -6,17 +6,17 @@ public enum TokenType {
 	ACCESS(Duration.ofMinutes(30)),
 	REFRESH(Duration.ofDays(14));
 
-	private final Duration duraion;
+	private final Duration duration;
 
-	TokenType(Duration duraion) {
-		this.duraion = duraion;
+	TokenType(Duration duration) {
+		this.duration = duration;
 	}
 
 	public Long getDurationToSec() {
-		return this.duraion.toSeconds();
+		return this.duration.toSeconds();
 	}
 
 	public Long getDurationToMilli() {
-		return this.duraion.toMillis();
+		return this.duration.toMillis();
 	}
 }
