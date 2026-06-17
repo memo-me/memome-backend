@@ -13,4 +13,6 @@ public interface MemoRepository extends JpaRepository<Memo, Long> {
 	List<Memo> findAllByAuthor(Member author);
 
 	Optional<Memo> findByIdAndAuthor(Long id, Member author);
+
+	void deleteAllByAuthorId(Long authorId);
 }

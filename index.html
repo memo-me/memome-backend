@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<h1 id="hh">로그인 전</h1>
+<button onclick="location.href='http://localhost:8080/oauth2/authorization/google'">login 버튼</button>
+<button onclick="clickGetBtn(this.id)">GET</button>
+<button onclick="clickRefresh(this.id)">Refresh</button>
+<button onclick="clickLogout(this.id)">logout</button>
+<div id="bb"></div>
+</body>
+<script type="text/javascript">
+    const hh = document.getElementById('hh');
+    const bb = document.getElementById('bb');
+
+    async function clickGetBtn(btnId) {
+        const response = await requestWithRefresh("http://localhost:8080/members/me", {
+            headers: {"Authorization": `Bearer ${sessionStorage.getItem("accessToken")}`},
+            credentials: 'include'
+        });
+
+        const body = await response.json();
+        bb.innerText = JSON.stringify(body);
+    }
+
+    async function clickRefresh(btnId) {
+        const response = await fetch("http://localhost:8080/auth/refresh", {
+            credentials: 'include'
+        });
+
+        const body = await response.text();
+        sessionStorage.setItem("accessToken", body);
+        bb.innerText = 'refresh 성공';
+    }
+
+    async function clickLogout(btnId) {
+        const response = await requestWithRefresh("http://localhost:8080/logout", {
+            headers: {"Authorization": `Bearer ${sessionStorage.getItem("accessToken")}`},
+            credentials: 'include'
+        });
+        sessionStorage.removeItem("accessToken");
+    }
+
+    async function requestWithRefresh(url, options) {
+        const response = await fetch(url, options);
+        if (response.status != 401) {
+            return response;
+        }
+        const refreshResponse = await fetch("http://localhost:8080/auth/refresh", {
+                credentials: 'include'});
+        const body = await refreshResponse.text();
+        sessionStorage.setItem("accessToken", body);
+        options['headers'] = `Bearer ${sessionStorage.getItem("accessToken")}`;
+        return await fetch(url, options);
+    }
+</script>
+</html>

@@ -7,6 +7,7 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 
 import cloud.memome.backend.application.member.MemberService;
 import cloud.memome.backend.application.member.dto.OAuthUserInfo;
+import cloud.memome.backend.domain.member.Member;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -19,8 +20,8 @@ public class MyOidcService extends OidcUserService {
 
 		OAuthUserInfo oAuthUserInfo = OAuthUserInfoResolver.resolve(oidcUser.getAttributes());
 
-		memberService.getOrCreateMember(oAuthUserInfo);
+		Member member = memberService.getOrCreateMember(oAuthUserInfo);
 
-		return oidcUser;
+		return new LoginMemberOidcUser(oidcUser, member.getId());
 	}
 }

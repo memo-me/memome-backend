@@ -34,6 +34,9 @@ spring:
         show_sql: true
         format_sql: true
 
+jwt:
+  secret: ${JWT_SECRET}
+  issuer: backend.memome.cloud
 logging.level:
   cloud.memome.backend: INFO
   org.springframework.security.oauth2: INFO
