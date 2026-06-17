@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import cloud.memome.backend.api.auth.exception.InvalidRefreshTokenException;
 import cloud.memome.backend.application.member.exception.InvalidAuthenticationException;
+import cloud.memome.backend.application.member.exception.NoSuchMemberException;
 import cloud.memome.backend.application.memo.exception.MemoNotFoundException;
 import io.jsonwebtoken.JwtException;
 import lombok.Getter;
@@ -52,6 +53,12 @@ public class GlobalAdvice {
 	public ResponseEntity<Object> jwtException(JwtException exception) {
 		ProblemDetail body = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Invalid Jwt");
 		return createResponse(body, HttpHeaders.EMPTY, HttpStatus.UNAUTHORIZED);
+	}
+
+	@ExceptionHandler(NoSuchMemberException.class)
+	public ResponseEntity<Object> noSuchMemberException(NoSuchMemberException exception) {
+		ProblemDetail body = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
+		return createResponse(body, HttpHeaders.EMPTY, HttpStatus.NOT_FOUND);
 	}
 
 	@ExceptionHandler(MemoNotFoundException.class)
