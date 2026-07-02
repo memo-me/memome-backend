@@ -11,6 +11,7 @@ import cloud.memome.backend.application.member.exception.NoSuchMemberException;
 import cloud.memome.backend.domain.member.Member;
 import cloud.memome.backend.domain.member.MemberRepository;
 import cloud.memome.backend.domain.member.OAuthIdentity;
+import cloud.memome.backend.domain.memo.MemoRepository;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class MemberService {
 	private final MemberRepository memberRepository;
+	private final MemoRepository memoRepository;
 
 	@Transactional
 	public Member getOrCreateMember(OAuthUserInfo oAuthUserInfo) {
@@ -61,6 +63,7 @@ public class MemberService {
 	@Transactional
 	public void removeMember(Long id) {
 		Member member = this.getMemberById(id);
+		memoRepository.deleteAllByAuthorId(id);
 		memberRepository.delete(member);
 	}
 }

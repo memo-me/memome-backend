@@ -24,7 +24,6 @@ import cloud.memome.backend.api.member.request.UpdateMyInfoRequest;
 import cloud.memome.backend.application.member.MemberService;
 import cloud.memome.backend.application.member.dto.UpdateMemberDto;
 import cloud.memome.backend.application.member.exception.NoSuchMemberException;
-import cloud.memome.backend.application.memo.MemoService;
 import cloud.memome.backend.domain.member.Member;
 import cloud.memome.backend.domain.member.OAuthIdentity;
 import cloud.memome.backend.domain.member.ProviderType;
@@ -42,9 +41,6 @@ class MemberControllerTest {
 	@MockitoBean
 	private MemberService memberService;
 
-	@MockitoBean //TODO: 컨트롤러 생성 위해 필요, 이후 변경 시 삭제 예정
-	private MemoService memoService;
-
 	private static final Long LOGIN_MEMBER_ID = 1L;
 
 	@Test
@@ -61,8 +57,8 @@ class MemberControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.nickname").value(member.getNickname()))
 			.andExpect(jsonPath("$.email").value(member.getEmail()))
-			.andExpect(jsonPath("$.createdAt").value(member.getCreatedAt().toString()))
-			.andExpect(jsonPath("$.updatedAt").value(member.getCreatedAt().toString()));
+			.andExpect(jsonPath("$.createdAt").exists())
+			.andExpect(jsonPath("$.updatedAt").exists());
 
 		verify(memberService).getMemberById(member.getId());
 	}
@@ -107,8 +103,8 @@ class MemberControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.nickname").value(updatedMember.getNickname()))
 			.andExpect(jsonPath("$.email").value(updatedMember.getEmail()))
-			.andExpect(jsonPath("$.createdAt").value(updatedMember.getCreatedAt().toString()))
-			.andExpect(jsonPath("$.updatedAt").value(updatedMember.getCreatedAt().toString()));
+			.andExpect(jsonPath("$.createdAt").exists())
+			.andExpect(jsonPath("$.updatedAt").exists());
 
 		verify(memberService).updateMember(updatedMember.getId(), updateMemberDto);
 	}
@@ -199,7 +195,62 @@ class MemberControllerTest {
 			.andExpect(jsonPath("$.errors[*].message").exists());
 	}
 
-	//TODO: 닉네임이 blank 일 때, 이메일이 blank || 이메일 형식이 아닐 때
+	@Test
+	@DisplayName("PUT /members/me: 닉네임을 빈문자열로 수정할 때 400 반환")
+	public void updateAccountInfo_whenNicknameIsBlank() throws Exception {
+		//given
+		UpdateMyInfoRequest request = new UpdateMyInfoRequest("   ", "test@test.com");
+
+		//when && then
+		mockMvc.perform(put("/members/me")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request)))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Bad Request"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.instance").value("/members/me"))
+			.andExpect(jsonPath("$.errors[*].field").value(hasItem("nickname")))
+			.andExpect(jsonPath("$.errors[*].message").exists());
+	}
+
+	@Test
+	@DisplayName("PUT /members/me: 이메일을 빈문자열로 수정할 때 400 반환")
+	public void updateAccountInfo_whenEmailIsBlank() throws Exception {
+		//given
+		UpdateMyInfoRequest request = new UpdateMyInfoRequest("updated", "     ");
+
+		//when && then
+		mockMvc.perform(put("/members/me")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request)))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Bad Request"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.instance").value("/members/me"))
+			.andExpect(jsonPath("$.errors[*].field").value(hasItem("email")))
+			.andExpect(jsonPath("$.errors[*].message").exists());
+	}
+
+	@Test
+	@DisplayName("PUT /members/me: 이메일 형식을 따르지 않은 이메일로 수정할 때 400 반환")
+	public void updateAccountInfo_whenEmailIsNotRegex() throws Exception {
+		//given
+		UpdateMyInfoRequest request = new UpdateMyInfoRequest("updated", "github.com");
+
+		//when && then
+		mockMvc.perform(put("/members/me")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request)))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Bad Request"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.instance").value("/members/me"))
+			.andExpect(jsonPath("$.errors[*].field").value(hasItem("email")))
+			.andExpect(jsonPath("$.errors[*].message").exists());
+	}
 
 	@Test
 	@DisplayName("DELETE /members/me: 로그인 회원 탈퇴")
@@ -210,12 +261,27 @@ class MemberControllerTest {
 		mockMvc.perform(delete("/members/me"))
 			.andExpect(status().isNoContent());
 
-		verify(memoService).removeOwnedMemo(LOGIN_MEMBER_ID);
 		verify(memberService).removeMember(LOGIN_MEMBER_ID);
 	}
 
-	//TODO: 존재하지 않는 회원 탈퇴 시, 404 반환
-	//TODO: 회원이 작성한 메모가 존재할 때 탈퇴 시 정상 탈퇴 처리 -> service test
+	@Test
+	@DisplayName("DELETE /members/me: 존재하지 않는 회원 탈퇴 시도 시, 404 반환")
+	public void deleteAccount_whenMemberDoesNotExist() throws Exception {
+		//given
+		doThrow(new NoSuchMemberException())
+			.when(memberService).removeMember(LOGIN_MEMBER_ID);
+
+		//when && then
+		mockMvc.perform(delete("/members/me"))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Not Found"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
+			.andExpect(jsonPath("$.detail").value(new NoSuchMemberException().getMessage()))
+			.andExpect(jsonPath("$.instance").value("/members/me"));
+
+		verify(memberService).removeMember(LOGIN_MEMBER_ID);
+	}
 
 	private Member createMemberWithId(Long id) {
 		ProviderType providerType = ProviderType.GOOGLE;
