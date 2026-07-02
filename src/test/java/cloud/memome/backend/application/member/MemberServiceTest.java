@@ -1,229 +1,209 @@
 package cloud.memome.backend.application.member;
 
-import static org.mockito.ArgumentMatchers.*;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.util.Optional;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
-import cloud.memome.backend.application.member.dto.IdentityDto;
 import cloud.memome.backend.application.member.dto.OAuthUserInfo;
 import cloud.memome.backend.application.member.dto.UpdateMemberDto;
-import cloud.memome.backend.application.member.exception.InvalidAuthenticationException;
+import cloud.memome.backend.application.member.exception.NoSuchMemberException;
 import cloud.memome.backend.domain.member.Member;
 import cloud.memome.backend.domain.member.MemberRepository;
 import cloud.memome.backend.domain.member.OAuthIdentity;
 import cloud.memome.backend.domain.member.ProviderType;
+import cloud.memome.backend.domain.memo.MemoRepository;
 
 @ExtendWith(MockitoExtension.class)
-class MemberServiceTest {
-	@Mock
-	private MemberRepository memberRepository;
-
+public class MemberServiceTest {
 	@InjectMocks
 	private MemberService memberService;
 
-	@DisplayName("조회 또는 생성: 조회")
-	@Test
-	public void getOrCreateMember_get() {
-		//given
-		ProviderType providerType = ProviderType.GOOGLE;
-		String providerId = "1234567890";
-		String nickname = "test nickname";
-		String email = "test@email.com";
+	@Mock
+	private MemberRepository memberRepository;
+	@Mock
+	private MemoRepository memoRepository;
 
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(providerType, providerId);
-		OAuthUserInfo oAuthUserInfo = new OAuthUserInfo(providerType, providerId, nickname, email);
-		Member member = Member.create(oAuthIdentity, nickname, email);
+	private final static Long LOGIN_MEMBER_ID = 1L;
+
+	@Test
+	@DisplayName("getOrCreateMember(): 회원 조회 성공")
+	public void getOrCreateMember_getMember() {
+		//given
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
+		OAuthIdentity oAuthIdentity = member.getOAuthIdentity();
 
 		when(memberRepository.findByOAuthIdentity(oAuthIdentity))
-			.thenReturn(Optional.of(member)); //저장된 객체 조회 및 리턴
+			.thenReturn(Optional.of(member));
 
 		//when
-		Member result = memberService.getOrCreateMember(oAuthUserInfo);
+		OAuthUserInfo info = new OAuthUserInfo(
+			oAuthIdentity.getProviderType(),
+			oAuthIdentity.getProviderId(),
+			member.getNickname(),
+			member.getEmail()
+		);
+		Member result = memberService.getOrCreateMember(info);
 
 		//then
-		Assertions.assertThat(result.getOAuthIdentity()).isEqualTo(oAuthIdentity);
-		Assertions.assertThat(result.getNickname()).isEqualTo(nickname);
-		Assertions.assertThat(result.getEmail()).isEqualTo(email);
+		assertThat(result).isSameAs(member);
 
-		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
-		verify(memberRepository, never()).save(any(Member.class));
+		verify(memberRepository).findByOAuthIdentity(oAuthIdentity);
+		verify(memberRepository, never()).save(any());
 	}
 
-	@DisplayName("조회 또는 생성: 생성")
 	@Test
-	public void getOrCreateMember_create() {
+	@DisplayName("getOrCreateMember(): 회원이 없으면 생성 후 반환")
+	public void getOrCreateMember_saveMember() {
 		//given
-		ProviderType providerType = ProviderType.GOOGLE;
-		String providerId = "1234567890";
-		String nickname = "test nickname";
-		String email = "test@email.com";
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
+		OAuthIdentity oAuthIdentity = member.getOAuthIdentity();
 
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(providerType, providerId);
-		OAuthUserInfo oAuthUserInfo = new OAuthUserInfo(providerType, providerId, nickname, email);
-		Member member = Member.create(oAuthIdentity, nickname, email);
-
-		when(memberRepository.findByOAuthIdentity(any(OAuthIdentity.class)))
+		when(memberRepository.findByOAuthIdentity(oAuthIdentity))
 			.thenReturn(Optional.empty());
 		when(memberRepository.save(any(Member.class)))
-			.thenReturn(member); //새로 저장 후 리턴
+			.thenReturn(member);
+
+		OAuthUserInfo info = new OAuthUserInfo(
+			oAuthIdentity.getProviderType(),
+			oAuthIdentity.getProviderId(),
+			member.getNickname(),
+			member.getEmail()
+		);
 
 		//when
-		Member result = memberService.getOrCreateMember(oAuthUserInfo);
+		Member result = memberService.getOrCreateMember(info);
 
 		//then
-		Assertions.assertThat(result.getOAuthIdentity()).isEqualTo(oAuthIdentity);
-		Assertions.assertThat(result.getNickname()).isEqualTo(nickname);
-		Assertions.assertThat(result.getEmail()).isEqualTo(email);
+		assertThat(result).isSameAs(member);
 
-		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
-		verify(memberRepository).save(any(Member.class)); //저장
+		verify(memberRepository).findByOAuthIdentity(oAuthIdentity);
+		verify(memberRepository).save(any(Member.class));
 	}
 
-	@DisplayName("저장된 멤버 조회")
 	@Test
+	@DisplayName("getMemberById(): 아이디로 회원 조회 성공")
 	public void getMemberById() {
 		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "1234567890");
-		String nickname = "test nickname";
-		String email = "test@email.com";
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
 
-		Member member = Member.create(oAuthIdentity, nickname, email);
-		when(memberRepository.findByOAuthIdentity(oAuthIdentity))
+		when(memberRepository.findById(LOGIN_MEMBER_ID))
 			.thenReturn(Optional.of(member));
 
 		//when
-		Member find = memberService.getMemberByIdentity(new IdentityDto(ProviderType.GOOGLE, "1234567890"));
+		Member result = memberService.getMemberById(LOGIN_MEMBER_ID);
 
 		//then
-		Assertions.assertThat(find.getOAuthIdentity()).isEqualTo(oAuthIdentity);
-		Assertions.assertThat(find.getNickname()).isEqualTo(nickname);
-		Assertions.assertThat(find.getEmail()).isEqualTo(email);
+		assertThat(result).isSameAs(member);
 
-		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
+		verify(memberRepository).findById(LOGIN_MEMBER_ID);
 	}
 
-	@DisplayName("저장되지 않은 멤버 조회")
 	@Test
-	public void getMemberById_notFound() {
+	@DisplayName("getMemberById(): 존재하지 않는 회원 조회 시 예외 발생")
+	public void getMemberById_whenMemberDoesNotExist() {
 		//given
-		when(memberRepository.findByOAuthIdentity(any(OAuthIdentity.class)))
-			.thenReturn(Optional.empty());
-
-		//when & then
-		Assertions.assertThatThrownBy(
-				() -> memberService.getMemberByIdentity(new IdentityDto(ProviderType.GOOGLE, "1234567890")))
-			.isInstanceOf(InvalidAuthenticationException.class);
-		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
-	}
-
-	@DisplayName("저장된 멤버 OAuthIdentity로 조회")
-	@Test
-	public void getMemberByOAuthIdentity() {
-		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "1234567890");
-		String nickname = "test nickname";
-		String email = "test@email.com";
-
-		Member member = Member.create(oAuthIdentity, nickname, email);
-		when(memberRepository.findByOAuthIdentity(oAuthIdentity))
-			.thenReturn(Optional.of(member));
-
-		//when
-		Member find = memberService.getMemberByIdentity(new IdentityDto(ProviderType.GOOGLE, "1234567890"));
-
-		//then
-		Assertions.assertThat(find.getOAuthIdentity()).isEqualTo(oAuthIdentity);
-		Assertions.assertThat(find.getNickname()).isEqualTo(nickname);
-		Assertions.assertThat(find.getEmail()).isEqualTo(email);
-
-		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
-	}
-
-	@DisplayName("존재하지 않는 멤버 OAuthIdentity로 조회")
-	@Test
-	public void getMemberByOAuthIdentity_not_found() {
-		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "1234567890");
-
-		when(memberRepository.findByOAuthIdentity(oAuthIdentity))
+		when(memberRepository.findById(LOGIN_MEMBER_ID))
 			.thenReturn(Optional.empty());
 
 		//when && then
-		Assertions.assertThatThrownBy(
-				() -> memberService.getMemberByIdentity(new IdentityDto(ProviderType.GOOGLE, "1234567890")))
-			.isInstanceOf(InvalidAuthenticationException.class);
-		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
+		assertThatThrownBy(() -> memberService.getMemberById(LOGIN_MEMBER_ID))
+			.isInstanceOf(NoSuchMemberException.class);
+
+		verify(memberRepository).findById(LOGIN_MEMBER_ID);
 	}
 
-	@DisplayName("기존 회원 정보 수정")
 	@Test
-	public void updateMember_success() {
+	@DisplayName("updateMember(): 회원 정보 수정")
+	public void updateMember() {
 		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "1234567890");
-		String nickname = "test nickname";
-		String email = "test@email.com";
-		String updatedNickname = "updated nickname";
-		String updatedEmail = "updated@email.com";
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
+		UpdateMemberDto updateMemberDto = new UpdateMemberDto(
+			"updated", "updated@test.com"
+		);
 
-		UpdateMemberDto dto = new UpdateMemberDto(updatedNickname, updatedEmail);
-
-		Member member = Member.create(oAuthIdentity, nickname, email);
-		when(memberRepository.findByOAuthIdentity(oAuthIdentity))
+		when(memberRepository.findById(LOGIN_MEMBER_ID))
 			.thenReturn(Optional.of(member));
 
 		//when
-		Member result = memberService.updateMember(
-			new IdentityDto(ProviderType.GOOGLE, "1234567890"), dto);
+		Member result = memberService.updateMember(LOGIN_MEMBER_ID, updateMemberDto);
 
 		//then
-		Assertions.assertThat(result.getOAuthIdentity()).isEqualTo(oAuthIdentity);
-		Assertions.assertThat(result.getNickname()).isEqualTo(updatedNickname);
-		Assertions.assertThat(result.getEmail()).isEqualTo(updatedEmail);
+		assertThat(result).isSameAs(member);
+		assertThat(result.getNickname()).isEqualTo(updateMemberDto.getNickname());
+		assertThat(result.getEmail()).isEqualTo(updateMemberDto.getEmail());
 
-		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
+		verify(memberRepository).findById(LOGIN_MEMBER_ID);
 	}
 
-	@DisplayName("회원 삭제 성공")
 	@Test
-	public void deleteMember_success() {
+	@DisplayName("updateMember(): 존재하지 않는 회원 수정 시 예외 발생")
+	public void updateMember_whenMemberDoesNotExist() {
 		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "1234567890");
-		Member member = Member.create(oAuthIdentity, "nickname", "email@email.com");
-
-		when(memberRepository.findByOAuthIdentity(oAuthIdentity))
-			.thenReturn(Optional.of(member));
-
-		//when
-		memberService.removeMember(new IdentityDto(ProviderType.GOOGLE, "1234567890"));
-
-		//then
-		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
-		verify(memberRepository).delete(any(Member.class));
-	}
-
-	@DisplayName("존재하지 않는 회원 삭제 시도")
-	@Test
-	public void delete_fail_when_not_found() {
-		//given
-		when(memberRepository.findByOAuthIdentity(any(OAuthIdentity.class)))
+		when(memberRepository.findById(LOGIN_MEMBER_ID))
 			.thenReturn(Optional.empty());
 
-		//when & then
-		Assertions.assertThatThrownBy(
-				() -> memberService.removeMember(new IdentityDto(ProviderType.GOOGLE, "1234567890")))
-			.isInstanceOf(InvalidAuthenticationException.class);
+		UpdateMemberDto dto = new UpdateMemberDto(
+			"updated", "updated@test.com"
+		);
+
+		//when && then
+		assertThatThrownBy(() -> memberService.updateMember(LOGIN_MEMBER_ID, dto))
+			.isInstanceOf(NoSuchMemberException.class);
+
+		verify(memberRepository).findById(LOGIN_MEMBER_ID);
+	}
+
+	@Test
+	@DisplayName("removeMember(): 회원 탈퇴")
+	public void removeMember() {
+		//given
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
+
+		when(memberRepository.findById(LOGIN_MEMBER_ID))
+			.thenReturn(Optional.of(member));
+
+		//when
+		memberService.removeMember(LOGIN_MEMBER_ID);
 
 		//then
-		verify(memberRepository).findByOAuthIdentity(any(OAuthIdentity.class));
+		verify(memberRepository).findById(LOGIN_MEMBER_ID);
+		verify(memoRepository).deleteAllByAuthorId(LOGIN_MEMBER_ID);
+		verify(memberRepository).delete(member);
+	}
+
+	@Test
+	@DisplayName("removeMember(): 존재하지 않는 회원 삭제 시 예외 발생")
+	public void removeMember_whenMemberDoesNotExist() {
+		//given
+		when(memberRepository.findById(LOGIN_MEMBER_ID))
+			.thenReturn(Optional.empty());
+
+		//when && then
+		assertThatThrownBy(() -> memberService.removeMember(LOGIN_MEMBER_ID))
+			.isInstanceOf(NoSuchMemberException.class);
+
+		verify(memberRepository).findById(LOGIN_MEMBER_ID);
+		verify(memoRepository, never()).deleteAllByAuthorId(LOGIN_MEMBER_ID);
 		verify(memberRepository, never()).delete(any(Member.class));
+	}
+
+	private Member createMemberWithId(Long id) {
+		ProviderType providerType = ProviderType.GOOGLE;
+		String providerId = "12345678";
+		String nickname = "홍길동";
+		String email = "test@test.com";
+
+		Member member = Member.create(new OAuthIdentity(providerType, providerId), nickname, email);
+		ReflectionTestUtils.setField(member, "id", id);
+		return member;
 	}
 }
