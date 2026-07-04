@@ -17,7 +17,6 @@ import cloud.memome.backend.api.member.request.UpdateMyInfoRequest;
 import cloud.memome.backend.api.member.response.MyInfoResponse;
 import cloud.memome.backend.application.member.MemberService;
 import cloud.memome.backend.application.member.dto.UpdateMemberDto;
-import cloud.memome.backend.application.memo.MemoService;
 import cloud.memome.backend.domain.member.Member;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -33,7 +32,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class MemberController {
 	private final MemberService memberService;
-	private final MemoService memoService;
 
 	@Operation(summary = "내 정보 확인", description = "내 계정의 정보를 조회합니다.")
 	@ApiResponses({
@@ -74,7 +72,6 @@ public class MemberController {
 	@DeleteMapping("/me")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void deleteAccount(@Login LoginMember loginMember) {
-		memoService.removeOwnedMemo(loginMember.getId());
 		memberService.removeMember(loginMember.getId());
 	}
 }

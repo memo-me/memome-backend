@@ -1,16 +1,16 @@
 package cloud.memome.backend.api.memo;
 
-import static org.hamcrest.Matchers.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
@@ -21,598 +21,526 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import cloud.memome.backend.api.OidcTestUtils;
+import cloud.memome.backend.api.TestConfiguration;
 import cloud.memome.backend.api.memo.request.ModifyMemoRequest;
 import cloud.memome.backend.api.memo.request.WriteNewMemoRequest;
+import cloud.memome.backend.api.memo.response.MemoListResponse;
 import cloud.memome.backend.application.member.MemberService;
-import cloud.memome.backend.application.member.dto.IdentityDto;
+import cloud.memome.backend.application.member.exception.NoSuchMemberException;
 import cloud.memome.backend.application.memo.MemoService;
+import cloud.memome.backend.application.memo.dto.CreateMemoDto;
 import cloud.memome.backend.application.memo.dto.GetOwnedMemoDto;
 import cloud.memome.backend.application.memo.dto.RemoveMemoDto;
+import cloud.memome.backend.application.memo.dto.UpdateMemoDto;
 import cloud.memome.backend.application.memo.exception.MemoNotFoundException;
 import cloud.memome.backend.domain.member.Member;
 import cloud.memome.backend.domain.member.OAuthIdentity;
 import cloud.memome.backend.domain.member.ProviderType;
 import cloud.memome.backend.domain.memo.Memo;
-import cloud.memome.backend.infra.security.config.AuthConfig;
 
 @WebMvcTest(MemoController.class)
-@Import(AuthConfig.class)
+@Import(TestConfiguration.class)
+@AutoConfigureMockMvc(addFilters = false)
 class MemoControllerTest {
 	@Autowired
 	private MockMvc mockMvc;
+	@Autowired
+	private ObjectMapper objectMapper;
+
 	@MockitoBean
 	private MemoService memoService;
 	@MockitoBean
 	private MemberService memberService;
-	@Autowired
-	private ObjectMapper objectMapper;
+
+	private final static Long LOGIN_MEMBER_ID = 1L;
 
 	@Test
-	@DisplayName("GET /memos: 인증되지 않은 접근 (401)")
-	public void getMemoSummaryList_unauthorized() throws Exception {
+	@DisplayName("GET /memos: 로그인한 회원이 작성한 모든 메모 요약 리스트 조회")
+	public void getMemoSummaryList() throws Exception {
+		//given
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
+		List<Memo> memoList = createMemoListWithMember(member);
+
+		when(memberService.getMemberById(LOGIN_MEMBER_ID))
+			.thenReturn(member);
+		when(memoService.getOwnedMemosAll(member))
+			.thenReturn(memoList);
+
+		//when & then
+		MemoListResponse.MemoSummary firstSummary = new MemoListResponse.MemoSummary(memoList.getFirst());
 		mockMvc.perform(get("/memos"))
-			.andExpect(status().isUnauthorized());
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.count").value(memoList.size()))
+			.andExpect(jsonPath("$.memoSummaryList.length()").value(memoList.size()))
+			.andExpect(jsonPath("$.memoSummaryList[0].id").value(firstSummary.getId()))
+			.andExpect(jsonPath("$.memoSummaryList[0].title").value(firstSummary.getTitle()))
+			.andExpect(jsonPath("$.memoSummaryList[0].bodySummary").value(firstSummary.getBodySummary()))
+			.andExpect(jsonPath("$.memoSummaryList[0].createdAt").exists())
+			.andExpect(jsonPath("$.memoSummaryList[0].updatedAt").exists());
+
+		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService).getOwnedMemosAll(member);
 	}
 
 	@Test
-	@DisplayName("GET /memos: 회원이 작성한 모든 메모 요약 조회 성공 (200)")
-	public void getMemoSummaryList_success() throws Exception {
+	@DisplayName("GET /memos: 로그인한 회원이 작성한 모든 메모 요약 리스트 조회 시 메모가 없는 경우 200 반환")
+	public void getMemoSummaryList_whenMemoDoesNotExist() throws Exception {
 		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member member = Member.create(oAuthIdentity, "nickname", "email@email.com");
-		when(memberService.getMemberByIdentity(any(IdentityDto.class)))
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
+		List<Memo> memoList = List.of();
+
+		when(memberService.getMemberById(LOGIN_MEMBER_ID))
 			.thenReturn(member);
-
-		Memo memo1 = Memo.create("title1", "This is body1.", member);
-		Memo memo2 = Memo.create("title2", "body2.", member);
-		when(memoService.getOwnedMemosAll(any(Member.class)))
-			.thenReturn(List.of(memo1, memo2));
+		when(memoService.getOwnedMemosAll(member))
+			.thenReturn(memoList);
 
 		//when & then
-		mockMvc.perform(get("/memos").with(
-				OidcTestUtils.login(oAuthIdentity)
-			))
+		mockMvc.perform(get("/memos"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.count").value(2))
-			.andExpect(jsonPath("$.memoSummaryList.length()").value(2))
-			.andExpect(jsonPath("$.memoSummaryList[*].id").exists())
-			.andExpect(jsonPath("$.memoSummaryList[*].title").exists())
-			.andExpect(jsonPath("$.memoSummaryList[*].bodySummary").exists())
-			.andExpect(jsonPath("$.memoSummaryList[*].createdAt").exists())
-			.andExpect(jsonPath("$.memoSummaryList[*].updatedAt").exists());
+			.andExpect(jsonPath("$.count").value(memoList.size()))
+			.andExpect(jsonPath("$.memoSummaryList.length()").value(memoList.size()));
+
+		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService).getOwnedMemosAll(member);
 	}
 
 	@Test
-	@DisplayName("GET /memos: 회원이 작성한 메모 없을 때, 모든 메모 요약 조회 성공 (200)")
-	public void getMemoSummaryList_success_when_memo_not_exist() throws Exception {
+	@DisplayName("GET /memos: 로그인한 회원이 작성한 모든 메모 요약 리스트 조회 시 회원이 존재하지 않는 경우 404 반환")
+	public void getMemoSummaryList_whenMemberDoesNotExist() throws Exception {
 		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		when(memberService.getMemberByIdentity(any(IdentityDto.class)))
-			.thenReturn(Member.create(oAuthIdentity, "nickname", "email@email.com"));
-		when(memoService.getOwnedMemosAll(any(Member.class)))
-			.thenReturn(List.of());
+		when(memberService.getMemberById(LOGIN_MEMBER_ID))
+			.thenThrow(new NoSuchMemberException());
 
 		//when & then
-		mockMvc.perform(get("/memos").with(
-				OidcTestUtils.login(oAuthIdentity)
-			))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.count").value(0))
-			.andExpect(jsonPath("$.memoSummaryList").isEmpty());
+		mockMvc.perform(get("/memos"))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Not Found"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
+			.andExpect(jsonPath("$.detail").value(new NoSuchMemberException().getMessage()))
+			.andExpect(jsonPath("$.instance").value("/memos"));
+
+		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService, never()).getOwnedMemosAll(any(Member.class));
 	}
 
 	@Test
-	@DisplayName("GET /memos/{id}: 인증되지 않은 접근 (401)")
-	public void getMemo_unauthorized() throws Exception {
-		Long memoId = 1L;
-
-		mockMvc.perform(get("/memos/{id}", memoId))
-			.andExpect(status().isUnauthorized());
-	}
-
-	@Test
-	@DisplayName("GET /memos/{id}: 회원이 작성한 특정 메모 조회 (200)")
-	public void getMemo_success() throws Exception {
+	@DisplayName("POST /memos/{id}: 특정 메모 작성")
+	public void writeNewMemo() throws Exception {
 		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member member = Member.create(oAuthIdentity, "nickname", "email@email.com");
-		when(memberService.getMemberByIdentity(any(IdentityDto.class)))
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
+		Memo memo = createMemoWithIdAndMember(1L, member);
+
+		when(memberService.getMemberById(LOGIN_MEMBER_ID))
 			.thenReturn(member);
+		CreateMemoDto dto = new CreateMemoDto(memo.getTitle(), memo.getBody(), member);
+		when(memoService.createNewMemo(dto))
+			.thenReturn(memo);
 
-		Long memo1Id = 26L;
-		Memo memo1 = Memo.create("title1", "This is body1.", member);
-		ReflectionTestUtils.setField(memo1, "id", memo1Id);
-		when(memoService.getOwnedMemo(new GetOwnedMemoDto(memo1Id, member)))
-			.thenReturn(memo1);
+		WriteNewMemoRequest request = new WriteNewMemoRequest(memo.getTitle(), memo.getBody());
 
 		//when & then
-		mockMvc.perform(get("/memos/{id}", memo1Id).with(
-				OidcTestUtils.login(oAuthIdentity)
-			))
+		mockMvc.perform(post("/memos")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.id").value(memo1.getId()))
-			.andExpect(jsonPath("$.title").value(memo1.getTitle()))
-			.andExpect(jsonPath("$.body").value(memo1.getBody()))
+			.andExpect(jsonPath("$.id").value(memo.getId()))
+			.andExpect(jsonPath("$.title").value(memo.getTitle()))
+			.andExpect(jsonPath("$.body").value(memo.getBody()))
 			.andExpect(jsonPath("$.createdAt").exists())
 			.andExpect(jsonPath("$.updatedAt").exists());
+
+		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService).createNewMemo(dto);
 	}
 
 	@Test
-	@DisplayName("GET /memos/{id}: 다른 회원이 작성한 특정 메모 조회 (404)")
-	public void getMemo_fail_when_not_my_memo() throws Exception {
+	@DisplayName("POST /memos: 존재하지 않는 회원이 메모 작성 시 404 반환")
+	public void writeNewMemo_whenMemberDoesNotExist() throws Exception {
 		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member member = Member.create(oAuthIdentity, "nickname", "email@email.com");
-		when(memberService.getMemberByIdentity(any(IdentityDto.class)))
-			.thenReturn(member);
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
+		Memo memo = createMemoWithIdAndMember(1L, member);
 
-		Long memoIdNotMine = 26L;
-		when(memoService.getOwnedMemo(new GetOwnedMemoDto(memoIdNotMine, member)))
-			.thenThrow(new MemoNotFoundException());
+		when(memberService.getMemberById(LOGIN_MEMBER_ID))
+			.thenThrow(new NoSuchMemberException());
+
+		WriteNewMemoRequest request = new WriteNewMemoRequest(memo.getTitle(), memo.getBody());
 
 		//when & then
-		mockMvc.perform(get("/memos/{id}", memoIdNotMine).with(
-				OidcTestUtils.login(oAuthIdentity)))
+		mockMvc.perform(post("/memos")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
-			.andExpect(jsonPath("$.detail").exists());
+			.andExpect(jsonPath("$.detail").value(new NoSuchMemberException().getMessage()))
+			.andExpect(jsonPath("$.instance").value("/memos"));
+
+		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService, never()).createNewMemo(any(CreateMemoDto.class));
 	}
 
 	@Test
-	@DisplayName("GET /memos/{id}: 존재하지 않는 메모 조회 (404)")
-	public void getMemo_fail_when_not_exist() throws Exception {
+	@DisplayName("GET /memos/{id}: 특정 메모 조회")
+	public void getMemo() throws Exception {
 		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member member = Member.create(oAuthIdentity, "nickname", "email@email.com");
-		when(memberService.getMemberByIdentity(any(IdentityDto.class)))
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
+		Memo memo = createMemoWithIdAndMember(1L, member);
+
+		when(memberService.getMemberById(LOGIN_MEMBER_ID))
 			.thenReturn(member);
 
-		Long notExistMemoId = 26L;
-		when(memoService.getOwnedMemo(new GetOwnedMemoDto(notExistMemoId, member)))
+		GetOwnedMemoDto dto = new GetOwnedMemoDto(memo.getId(), member);
+		when(memoService.getOwnedMemo(dto))
+			.thenReturn(memo);
+
+		//when & then
+		mockMvc.perform(get("/memos/{id}", memo.getId()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.id").value(memo.getId()))
+			.andExpect(jsonPath("$.title").value(memo.getTitle()))
+			.andExpect(jsonPath("$.body").value(memo.getBody()))
+			.andExpect(jsonPath("$.createdAt").exists())
+			.andExpect(jsonPath("$.updatedAt").exists());
+
+		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService).getOwnedMemo(dto);
+	}
+
+	@Test
+	@DisplayName("GET /memos/{id}: 존재하지 않는 메모 조회 시 404 반환")
+	public void getMemo_whenMemoDoesNotExist() throws Exception {
+		//given
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
+		Memo memo = createMemoWithIdAndMember(1L, member);
+
+		when(memberService.getMemberById(LOGIN_MEMBER_ID))
+			.thenReturn(member);
+
+		GetOwnedMemoDto dto = new GetOwnedMemoDto(memo.getId(), member);
+		when(memoService.getOwnedMemo(dto))
 			.thenThrow(new MemoNotFoundException());
 
 		//when & then
-		mockMvc.perform(get("/memos/{id}", notExistMemoId).with(
-				OidcTestUtils.login(oAuthIdentity)))
+		mockMvc.perform(get("/memos/{id}", memo.getId()))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
-			.andExpect(jsonPath("$.detail").exists());
+			.andExpect(jsonPath("$.detail").value(new MemoNotFoundException().getMessage()))
+			.andExpect(jsonPath("$.instance").value("/memos/" + memo.getId()));
+
+		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService).getOwnedMemo(dto);
 	}
 
 	@Test
-	@DisplayName("POST /memos: 비로그인 상태 접근 401")
-	public void writeMemo_fail_when_unauthorized() throws Exception {
+	@DisplayName("GET /memos/{id}: 존재하지 않는 회원이 메모 조회 시 404 반환")
+	public void getMemo_whenMemberDoesNotExist() throws Exception {
 		//given
 		Long memoId = 1L;
+
+		when(memberService.getMemberById(LOGIN_MEMBER_ID))
+			.thenThrow(new NoSuchMemberException());
 
 		//when & then
-		mockMvc.perform(post("/memos"))
-			.andExpect(status().isUnauthorized());
+		mockMvc.perform(get("/memos/{id}", memoId))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Not Found"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
+			.andExpect(jsonPath("$.detail").value(new NoSuchMemberException().getMessage()))
+			.andExpect(jsonPath("$.instance").value("/memos/" + memoId));
+
+		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService, never()).getOwnedMemo(any(GetOwnedMemoDto.class));
 	}
 
 	@Test
-	@DisplayName("POST /memos: 메모 작성 성공")
-	public void writeMemo_success() throws Exception {
+	@DisplayName("PUT /memos/{id}: 특정 메모 수정")
+	public void modifyMemo() throws Exception {
 		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member member = Member.create(oAuthIdentity, "nickname", "email@email.com");
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
+		Memo updatedMemo = createMemoWithIdAndMember(1L, member);
 
-		Long memoId = 1L;
-
-		WriteNewMemoRequest request = new WriteNewMemoRequest("new title", "new content");
-		Memo createdMemo = Memo.create(request.getTitle(), request.getBody(), member);
-		ReflectionTestUtils.setField(createdMemo, "id", memoId);
-
-		when(memberService.getMemberByIdentity(any()))
+		when(memberService.getMemberById(LOGIN_MEMBER_ID))
 			.thenReturn(member);
-		when(memoService.createNewMemo(any()))
-			.thenReturn(createdMemo);
 
-		//when & then
-		mockMvc.perform(post("/memos")
-				.with(OidcTestUtils.login(oAuthIdentity))
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request))
-			)
-			.andExpectAll(
-				status().isOk(),
-				jsonPath("$.id").value(createdMemo.getId()),
-				jsonPath("$.title").value(createdMemo.getTitle()),
-				jsonPath("$.body").value(createdMemo.getBody()),
-				jsonPath("$.createdAt").exists(),
-				jsonPath("$.updatedAt").exists()
-			);
-	}
-
-	@Test
-	@DisplayName("POST /memos: 메모 제목을 null로 작성 시 실패")
-	public void writeMemo_fail_when_title_is_null() throws Exception {
-		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member author = Member.create(oAuthIdentity, "nickname", "email@email.com");
-
-		Long memoId = 1L;
-
-		WriteNewMemoRequest request = new WriteNewMemoRequest(null, "created content");
-
-		//when & then
-		mockMvc.perform(post("/memos")
-				.with(OidcTestUtils.login(author.getOAuthIdentity()))
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request))
-			)
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.type").value("about:blank"))
-			.andExpect(jsonPath("$.title").value("Bad Request"))
-			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.errors[*].field").value(hasItem("title")))
-			.andExpect(jsonPath("$.errors[*].message").exists());
-	}
-
-	@Test
-	@DisplayName("POST /memos: 메모 제목을 빈문자열로 작성 시 실패")
-	public void writeMemo_fail_when_title_is_empty() throws Exception {
-		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member author = Member.create(oAuthIdentity, "nickname", "email@email.com");
-
-		Long memoId = 1L;
-
-		WriteNewMemoRequest request = new WriteNewMemoRequest("     ", "created content");
-
-		//when & then
-		mockMvc.perform(post("/memos")
-				.with(OidcTestUtils.login(author.getOAuthIdentity()))
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request))
-			)
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.type").value("about:blank"))
-			.andExpect(jsonPath("$.title").value("Bad Request"))
-			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.errors[*].field").value(hasItem("title")))
-			.andExpect(jsonPath("$.errors[*].message").exists());
-	}
-
-	@Test
-	@DisplayName("POST /memos: 메모 본문을 null로 작성 시 실패")
-	public void writeMemo_fail_when_body_is_null() throws Exception {
-		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member author = Member.create(oAuthIdentity, "nickname", "email@email.com");
-
-		Long memoId = 1L;
-
-		WriteNewMemoRequest request = new WriteNewMemoRequest("created title", null);
-
-		//when & then
-		mockMvc.perform(post("/memos")
-				.with(OidcTestUtils.login(author.getOAuthIdentity()))
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request))
-			)
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.type").value("about:blank"))
-			.andExpect(jsonPath("$.title").value("Bad Request"))
-			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.errors[*].field").value(hasItem("body")))
-			.andExpect(jsonPath("$.errors[*].message").exists());
-	}
-
-	@Test
-	@DisplayName("POST /memos: 메모 본문을 빈문자열로 작성 시 실패")
-	public void writeMemo_fail_when_body_is_empty() throws Exception {
-		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member author = Member.create(oAuthIdentity, "nickname", "email@email.com");
-
-		Long memoId = 1L;
-
-		WriteNewMemoRequest request = new WriteNewMemoRequest("created title", "         ");
-
-		//when & then
-		mockMvc.perform(post("/memos")
-				.with(OidcTestUtils.login(author.getOAuthIdentity()))
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request))
-			)
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.type").value("about:blank"))
-			.andExpect(jsonPath("$.title").value("Bad Request"))
-			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.errors[*].field").value(hasItem("body")))
-			.andExpect(jsonPath("$.errors[*].message").exists());
-	}
-
-	@Test
-	@DisplayName("PUT /memos/{id}: 비로그인 상태 접근 401")
-	public void modifyMemo_fail_when_unauthorize() throws Exception {
-		//given
-		Long memoId = 1L;
-
-		//when & then
-		mockMvc.perform(put("/memos/{id}", memoId))
-			.andExpect(status().isUnauthorized());
-	}
-
-	@Test
-	@DisplayName("PUT /memos/{id}: 메모 수정 성공")
-	public void modifyMemo_success() throws Exception {
-		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member member = Member.create(oAuthIdentity, "nickname", "email@email.com");
-
-		Long memoId = 1L;
-
-		ModifyMemoRequest request = new ModifyMemoRequest("updated title", "updated content");
-		Memo updatedMemo = Memo.create(request.getTitle(), request.getBody(), member);
-		ReflectionTestUtils.setField(updatedMemo, "id", memoId);
-
-		when(memberService.getMemberByIdentity(any()))
-			.thenReturn(member);
-		when(memoService.updateMemo(any()))
+		UpdateMemoDto dto = new UpdateMemoDto(updatedMemo.getId(), member, updatedMemo.getTitle(),
+			updatedMemo.getBody());
+		when(memoService.updateMemo(dto))
 			.thenReturn(updatedMemo);
 
+		ModifyMemoRequest request = new ModifyMemoRequest(updatedMemo.getTitle(), updatedMemo.getBody());
+
 		//when & then
-		mockMvc.perform(put("/memos/{id}", memoId)
-				.with(OidcTestUtils.login(oAuthIdentity))
+		mockMvc.perform(put("/memos/{id}", updatedMemo.getId())
 				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request))
-			)
-			.andExpectAll(
-				status().isOk(),
-				jsonPath("$.id").value(updatedMemo.getId()),
-				jsonPath("$.title").value(updatedMemo.getTitle()),
-				jsonPath("$.body").value(updatedMemo.getBody()),
-				jsonPath("$.createdAt").exists(),
-				jsonPath("$.updatedAt").exists()
-			);
+				.content(objectMapper.writeValueAsString(request)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.id").value(updatedMemo.getId()))
+			.andExpect(jsonPath("$.title").value(updatedMemo.getTitle()))
+			.andExpect(jsonPath("$.body").value(updatedMemo.getBody()))
+			.andExpect(jsonPath("$.createdAt").exists())
+			.andExpect(jsonPath("$.updatedAt").exists());
+
+		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService).updateMemo(dto);
 	}
 
 	@Test
-	@DisplayName("PUT /memos/{id}: 존재하지 않는 메모 수정 시도 시 실패")
-	public void modifyMemo_fail_when_not_exist() throws Exception {
+	@DisplayName("PUT /memos/{id}: 메모 제목을 null로 수정 시 400 반환")
+	public void modifyMemo_whenTitleIsNull() throws Exception {
 		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member member = Member.create(oAuthIdentity, "nickname", "email@email.com");
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
+		Memo updatedMemo = createMemoWithIdAndMember(1L, member);
+		ReflectionTestUtils.setField(updatedMemo, "title", null);
 
-		Long memoId = 1L;
+		ModifyMemoRequest request = new ModifyMemoRequest(updatedMemo.getTitle(), updatedMemo.getBody());
 
-		ModifyMemoRequest request = new ModifyMemoRequest("updated title", "updated content");
-		Memo updatedMemo = Memo.create(request.getTitle(), request.getBody(), member);
-		ReflectionTestUtils.setField(updatedMemo, "id", memoId);
+		//when & then
+		mockMvc.perform(put("/memos/{id}", updatedMemo.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request)))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Bad Request"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.instance").value("/memos/" + updatedMemo.getId()))
+			.andExpect(jsonPath("$.errors.length()").value(1))
+			.andExpect(jsonPath("$.errors[*].field").value("title"))
+			.andExpect(jsonPath("$.errors[*].message").exists());
 
-		when(memberService.getMemberByIdentity(any()))
+		verify(memberService, never()).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService, never()).updateMemo(any(UpdateMemoDto.class));
+	}
+
+	@Test
+	@DisplayName("PUT /memos/{id}: 메모 제목을 빈문자열로 수정 시 400 반환")
+	public void modifyMemo_whenTitleIsBlank() throws Exception {
+		//given
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
+		Memo updatedMemo = createMemoWithIdAndMember(1L, member);
+		ReflectionTestUtils.setField(updatedMemo, "title", "     ");
+
+		ModifyMemoRequest request = new ModifyMemoRequest(updatedMemo.getTitle(), updatedMemo.getBody());
+
+		//when & then
+		mockMvc.perform(put("/memos/{id}", updatedMemo.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request)))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Bad Request"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.instance").value("/memos/" + updatedMemo.getId()))
+			.andExpect(jsonPath("$.errors.length()").value(1))
+			.andExpect(jsonPath("$.errors[*].field").value("title"))
+			.andExpect(jsonPath("$.errors[*].message").exists());
+
+		verify(memberService, never()).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService, never()).updateMemo(any(UpdateMemoDto.class));
+	}
+
+	@Test
+	@DisplayName("PUT /memos/{id}: 메모 본문을 null로 수정 시 400 반환")
+	public void modifyMemo_whenBodyIsNull() throws Exception {
+		//given
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
+		Memo updatedMemo = createMemoWithIdAndMember(1L, member);
+		ReflectionTestUtils.setField(updatedMemo, "body", null);
+
+		ModifyMemoRequest request = new ModifyMemoRequest(updatedMemo.getTitle(), updatedMemo.getBody());
+
+		//when & then
+		mockMvc.perform(put("/memos/{id}", updatedMemo.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request)))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Bad Request"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.instance").value("/memos/" + updatedMemo.getId()))
+			.andExpect(jsonPath("$.errors.length()").value(1))
+			.andExpect(jsonPath("$.errors[*].field").value("body"))
+			.andExpect(jsonPath("$.errors[*].message").exists());
+
+		verify(memberService, never()).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService, never()).updateMemo(any(UpdateMemoDto.class));
+	}
+
+	@Test
+	@DisplayName("PUT /memos/{id}: 메모 본문을 빈문자열로 수정 시 400 반환")
+	public void modifyMemo_whenBodyIsBlank() throws Exception {
+		//given
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
+		Memo updatedMemo = createMemoWithIdAndMember(1L, member);
+		ReflectionTestUtils.setField(updatedMemo, "body", "     ");
+
+		ModifyMemoRequest request = new ModifyMemoRequest(updatedMemo.getTitle(), updatedMemo.getBody());
+
+		//when & then
+		mockMvc.perform(put("/memos/{id}", updatedMemo.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request)))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.type").value("about:blank"))
+			.andExpect(jsonPath("$.title").value("Bad Request"))
+			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+			.andExpect(jsonPath("$.instance").value("/memos/" + updatedMemo.getId()))
+			.andExpect(jsonPath("$.errors.length()").value(1))
+			.andExpect(jsonPath("$.errors[*].field").value("body"))
+			.andExpect(jsonPath("$.errors[*].message").exists());
+
+		verify(memberService, never()).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService, never()).updateMemo(any(UpdateMemoDto.class));
+	}
+
+	@Test
+	@DisplayName("PUT /memos/{id}: 존재하지 않는 메모를 수정할 때 404 반환")
+	public void modifyMemo_whenMemoDoesNotExist() throws Exception {
+		//given
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
+		Memo updatedMemo = createMemoWithIdAndMember(1L, member);
+
+		when(memberService.getMemberById(LOGIN_MEMBER_ID))
 			.thenReturn(member);
-		when(memoService.updateMemo(any()))
+
+		when(memoService.updateMemo(any(UpdateMemoDto.class)))
 			.thenThrow(new MemoNotFoundException());
 
+		ModifyMemoRequest request = new ModifyMemoRequest(updatedMemo.getTitle(), updatedMemo.getBody());
+
 		//when & then
-		mockMvc.perform(put("/memos/{id}", memoId)
-				.with(OidcTestUtils.login(oAuthIdentity))
+		mockMvc.perform(put("/memos/{id}", updatedMemo.getId())
 				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request))
-			)
+				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
-			.andExpect(jsonPath("$.detail").exists());
+			.andExpect(jsonPath("$.detail").value(new MemoNotFoundException().getMessage()))
+			.andExpect(jsonPath("$.instance").value("/memos/" + updatedMemo.getId()));
+
+		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService).updateMemo(any(UpdateMemoDto.class));
 	}
 
 	@Test
-	@DisplayName("PUT /memos/{id}: 다른 사람의 메모 수정 시도 시 실패")
-	public void modifyMemo_fail_when_not_mine() throws Exception {
+	@DisplayName("PUT /memos/{id}: 존재하지 않는 회원이 메모 수정을 시도할 때")
+	public void modifyMemo_whenMemberDoesNotExist() throws Exception {
 		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member author = Member.create(oAuthIdentity, "nickname", "email@email.com");
-		Member notAuthor = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "not author"),
-			"nickname123", "email123@email.com");
-
 		Long memoId = 1L;
 
-		ModifyMemoRequest request = new ModifyMemoRequest("updated title", "updated content");
-		Memo updatedMemo = Memo.create(request.getTitle(), request.getBody(), author);
-		ReflectionTestUtils.setField(updatedMemo, "id", memoId);
+		when(memberService.getMemberById(LOGIN_MEMBER_ID))
+			.thenThrow(new NoSuchMemberException());
 
-		when(memberService.getMemberByIdentity(any()))
-			.thenReturn(notAuthor);
-		when(memoService.updateMemo(any()))
-			.thenThrow(new MemoNotFoundException());
+		ModifyMemoRequest request = new ModifyMemoRequest("title", "body");
 
 		//when & then
 		mockMvc.perform(put("/memos/{id}", memoId)
-				.with(OidcTestUtils.login(notAuthor.getOAuthIdentity()))
 				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request))
-			)
+				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
-			.andExpect(jsonPath("$.detail").exists());
+			.andExpect(jsonPath("$.detail").value(new NoSuchMemberException().getMessage()))
+			.andExpect(jsonPath("$.instance").value("/memos/" + memoId));
+
+		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService, never()).updateMemo(any(UpdateMemoDto.class));
 	}
 
 	@Test
-	@DisplayName("PUT /memos/{id}: 메모 제목을 null로 수정 시 실패")
-	public void modifyMemo_fail_when_title_is_null() throws Exception {
+	@DisplayName("DELETE /memos/{id}: 특정 메모 삭제")
+	public void deleteMemo() throws Exception {
 		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member author = Member.create(oAuthIdentity, "nickname", "email@email.com");
-
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
 		Long memoId = 1L;
 
-		ModifyMemoRequest request = new ModifyMemoRequest(null, "updated content");
+		when(memberService.getMemberById(LOGIN_MEMBER_ID))
+			.thenReturn(member);
 
 		//when & then
-		mockMvc.perform(put("/memos/{id}", memoId)
-				.with(OidcTestUtils.login(author.getOAuthIdentity()))
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request))
-			)
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.type").value("about:blank"))
-			.andExpect(jsonPath("$.title").value("Bad Request"))
-			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.errors[*].field").value(hasItem("title")))
-			.andExpect(jsonPath("$.errors[*].message").exists());
-	}
-
-	@Test
-	@DisplayName("PUT /memos/{id}: 메모 제목을 빈문자열로 수정 시 실패")
-	public void modifyMemo_fail_when_title_is_empty() throws Exception {
-		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member author = Member.create(oAuthIdentity, "nickname", "email@email.com");
-
-		Long memoId = 1L;
-
-		ModifyMemoRequest request = new ModifyMemoRequest("     ", "updated content");
-
-		//when & then
-		mockMvc.perform(put("/memos/{id}", memoId)
-				.with(OidcTestUtils.login(author.getOAuthIdentity()))
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request))
-			)
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.type").value("about:blank"))
-			.andExpect(jsonPath("$.title").value("Bad Request"))
-			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.errors[*].field").value(hasItem("title")))
-			.andExpect(jsonPath("$.errors[*].message").exists());
-	}
-
-	@Test
-	@DisplayName("PUT /memos/{id}: 메모 본문을 null로 수정 시 실패")
-	public void modifyMemo_fail_when_body_is_null() throws Exception {
-		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member author = Member.create(oAuthIdentity, "nickname", "email@email.com");
-
-		Long memoId = 1L;
-
-		ModifyMemoRequest request = new ModifyMemoRequest("updated title", null);
-
-		//when & then
-		mockMvc.perform(put("/memos/{id}", memoId)
-				.with(OidcTestUtils.login(author.getOAuthIdentity()))
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request))
-			)
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.type").value("about:blank"))
-			.andExpect(jsonPath("$.title").value("Bad Request"))
-			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.errors[*].field").value(hasItem("body")))
-			.andExpect(jsonPath("$.errors[*].message").exists());
-	}
-
-	@Test
-	@DisplayName("PUT /memos/{id}: 메모 본문을 빈문자열로 수정 시 실패")
-	public void modifyMemo_fail_when_body_is_empty() throws Exception {
-		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member author = Member.create(oAuthIdentity, "nickname", "email@email.com");
-
-		Long memoId = 1L;
-
-		ModifyMemoRequest request = new ModifyMemoRequest("updated title", "         ");
-
-		//when & then
-		mockMvc.perform(put("/memos/{id}", memoId)
-				.with(OidcTestUtils.login(author.getOAuthIdentity()))
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request))
-			)
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.type").value("about:blank"))
-			.andExpect(jsonPath("$.title").value("Bad Request"))
-			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.errors[*].field").value(hasItem("body")))
-			.andExpect(jsonPath("$.errors[*].message").exists());
-	}
-
-	@Test
-	@DisplayName("DELETE /memos/{id}: 비로그인 상태 접근 시 실패")
-	public void deleteMemo_when_unauthorized() throws Exception {
-		Long memoId = 1L;
-
-		//when && then
 		mockMvc.perform(delete("/memos/{id}", memoId))
-			.andExpectAll(
-				status().isUnauthorized()
-			);
+			.andExpect(status().isNoContent());
+
+		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService).removeMemo(new RemoveMemoDto(memoId, member));
 	}
 
 	@Test
-	@DisplayName("DELETE /memos/{id}: 특정 메모 삭제 성공(204)")
-	public void deleteMemo_success() throws Exception {
+	@DisplayName("DELETE /memos/{id}: 존재하지 않는 메모 삭제 시 404 반환")
+	public void deleteMemo_whenMemoDoesNotExist() throws Exception {
 		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member author = Member.create(oAuthIdentity, "nickname", "email@email.com");
+		Member member = createMemberWithId(LOGIN_MEMBER_ID);
 		Long memoId = 1L;
 
-		when(memberService.getMemberByIdentity(any()))
-			.thenReturn(author);
-		doNothing()
-			.when(memoService).removeMemo(any(RemoveMemoDto.class));
-
-		//when && then
-		mockMvc.perform(delete("/memos/{id}", memoId).with(
-				OidcTestUtils.login(oAuthIdentity)))
-			.andExpect(status().isNoContent())
-			.andExpect(content().string(""));
-	}
-
-	@Test
-	@DisplayName("DELETE /memos/{id}: 존재하지 않는 메모 삭제 시 실패")
-	public void deleteMemo_fail_when_not_exist() throws Exception {
-		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member author = Member.create(oAuthIdentity, "nickname", "email@email.com");
-		Long memoId = 1L;
-
-		when(memberService.getMemberByIdentity(any(IdentityDto.class)))
-			.thenReturn(author);
+		when(memberService.getMemberById(LOGIN_MEMBER_ID))
+			.thenReturn(member);
+		RemoveMemoDto dto = new RemoveMemoDto(memoId, member);
 		doThrow(new MemoNotFoundException())
-			.when(memoService).removeMemo(any());
+			.when(memoService).removeMemo(dto);
 
-		//when && then
-		mockMvc.perform(delete("/memos/{id}", memoId).with(
-				OidcTestUtils.login(oAuthIdentity)))
+		//when & then
+		mockMvc.perform(delete("/memos/{id}", memoId))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
-			.andExpect(jsonPath("$.detail").exists());
+			.andExpect(jsonPath("$.detail").value(new MemoNotFoundException().getMessage()))
+			.andExpect(jsonPath("$.instance").value("/memos/" + memoId));
+
+		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService).removeMemo(dto);
 	}
 
 	@Test
-	@DisplayName("DELETE /memos/{id}: 다른 사용자의 메모 삭제 요청 시 실패")
-	public void deleteMemo_fail_when_not_mine() throws Exception {
+	@DisplayName("DELETE /memos/{id}: 존재하지 않는 회원이 메모 삭제 시도 시 404 반환")
+	public void deleteMemo_whenMemberDoesNotExist() throws Exception {
 		//given
-		OAuthIdentity oAuthIdentity = new OAuthIdentity(ProviderType.GOOGLE, "0123456789");
-		Member notAuthor = Member.create(oAuthIdentity, "nickname", "email@email.com");
 		Long memoId = 1L;
 
-		when(memberService.getMemberByIdentity(any(IdentityDto.class)))
-			.thenReturn(notAuthor);
-		doThrow(new MemoNotFoundException())
-			.when(memoService).removeMemo(any(RemoveMemoDto.class));
+		when(memberService.getMemberById(LOGIN_MEMBER_ID))
+			.thenThrow(new NoSuchMemberException());
 
-		//when && then
-		mockMvc.perform(delete("/memos/{id}", memoId).with(
-				OidcTestUtils.login(oAuthIdentity)))
+		//when & then
+		mockMvc.perform(delete("/memos/{id}", memoId))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
-			.andExpect(jsonPath("$.detail").exists());
+			.andExpect(jsonPath("$.detail").value(new NoSuchMemberException().getMessage()))
+			.andExpect(jsonPath("$.instance").value("/memos/" + memoId));
+
+		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
+		verify(memoService, never()).removeMemo(any(RemoveMemoDto.class));
+	}
+
+	private Member createMemberWithId(Long id) {
+		ProviderType providerType = ProviderType.GOOGLE;
+		String providerId = "12345678";
+		String nickname = "홍길동";
+		String email = "test@test.com";
+
+		Member member = Member.create(new OAuthIdentity(providerType, providerId), nickname, email);
+		ReflectionTestUtils.setField(member, "id", id);
+		return member;
+	}
+
+	private List<Memo> createMemoListWithMember(Member member) {
+		List<Memo> ret = new ArrayList<>();
+		for (long i = 1; i <= 3; i++) {
+			ret.add(createMemoWithIdAndMember(i, member));
+		}
+		return ret;
+	}
+
+	private Memo createMemoWithIdAndMember(Long id, Member member) {
+		Memo memo = Memo.create("title" + id, "body" + id, member);
+		ReflectionTestUtils.setField(memo, "id", id);
+		return memo;
 	}
 }

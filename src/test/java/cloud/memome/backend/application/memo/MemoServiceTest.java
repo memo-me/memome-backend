@@ -1,11 +1,11 @@
 package cloud.memome.backend.application.memo;
 
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
 import java.util.Optional;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,237 +33,201 @@ class MemoServiceTest {
 	private MemoRepository memoRepository;
 
 	@Test
-	@DisplayName("메모 생성 - 성공")
-	public void create_memo_success() {
+	@DisplayName("createNewMemo(): 새로운 메모 작성")
+	public void createNewMemo() {
 		//given
-		String title = "memo title";
-		String body = "This is Memo body";
-		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
-		CreateMemoDto dto = new CreateMemoDto(title, body, author);
+		Member author = createMemberWithId(1L);
+		Memo memo = createMemoWithIdAndMember(1L, author);
+
+		CreateMemoDto dto = new CreateMemoDto(memo.getTitle(), memo.getBody(), author);
 
 		when(memoRepository.save(any(Memo.class)))
-			.thenAnswer(invocation -> invocation.getArgument(0));
+			.thenReturn(memo);
 
 		//when
 		Memo result = memoService.createNewMemo(dto);
 
 		//then
-		Assertions.assertThat(result).isNotNull();
-		Assertions.assertThat(result.getTitle()).isEqualTo(title);
-		Assertions.assertThat(result.getBody()).isEqualTo(body);
-		Assertions.assertThat(result.getAuthor()).isEqualTo(author);
+		assertThat(result).isSameAs(memo);
+
+		verify(memoRepository).save(any(Memo.class));
 	}
 
 	@Test
-	@DisplayName("메모 조회 - 성공")
-	public void get_memo_success_test() {
+	@DisplayName("getOwnedMemo(): 회원 자신이 작성한 메모 조회")
+	public void getOwnedMemo() {
 		//given
-		String title = "memo title";
-		String body = "This is Memo body";
-		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
-		Memo memo = Memo.create(title, body, author);
+		Member author = createMemberWithId(1L);
+		Memo memo = createMemoWithIdAndMember(1L, author);
 
-		Long memoId = 1L;
-		when(memoRepository.findByIdAndAuthor(memoId, author))
+		GetOwnedMemoDto dto = new GetOwnedMemoDto(author.getId(), author);
+
+		when(memoRepository.findByIdAndAuthor(dto.getMemoId(), dto.getAuthor()))
 			.thenReturn(Optional.of(memo));
 
 		//when
-		Memo result = memoService.getOwnedMemo(new GetOwnedMemoDto(memoId, author));
+		Memo result = memoService.getOwnedMemo(dto);
 
 		//then
-		Assertions.assertThat(result).isNotNull();
-		Assertions.assertThat(result.getTitle()).isEqualTo(title);
-		Assertions.assertThat(result.getBody()).isEqualTo(body);
-		Assertions.assertThat(result.getAuthor()).isEqualTo(author);
+		assertThat(result).isSameAs(memo);
+
+		verify(memoRepository).findByIdAndAuthor(memo.getId(), author);
 	}
 
 	@Test
-	@DisplayName("메모 조회 - 실패")
-	public void get_memo_fail() {
+	@DisplayName("getOwnedMemo(): 회원 자신이 작성하지 않거나 존재하지 않는 메모를 조회하는 경우 예외 발생")
+	public void getOwnedMemo_whenMemoDoesNotExist() {
 		//given
-		Long memoId = 1L;
-		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
-		GetOwnedMemoDto dto = new GetOwnedMemoDto(memoId, author);
+		Member author = createMemberWithId(1L);
+		Memo memo = createMemoWithIdAndMember(1L, author);
 
-		when(memoRepository.findByIdAndAuthor(memoId, author))
+		GetOwnedMemoDto dto = new GetOwnedMemoDto(memo.getId(), author);
+
+		when(memoRepository.findByIdAndAuthor(dto.getMemoId(), dto.getAuthor()))
 			.thenReturn(Optional.empty());
 
 		//when && then
-		Assertions.assertThatThrownBy(() -> memoService.getOwnedMemo(dto))
+		assertThatThrownBy(() -> memoService.getOwnedMemo(dto))
 			.isInstanceOf(MemoNotFoundException.class);
+
+		verify(memoRepository).findByIdAndAuthor(dto.getMemoId(), dto.getAuthor());
 	}
 
 	@Test
-	@DisplayName("모든 메모 조회 - 성공")
-	public void get_all_memos() {
+	@DisplayName("getOwnedMemosAll(): 자신이 작성한 모든 메모 리스트 조회")
+	public void getOwnedMemosAll() {
 		//given
-		String title = "memo title";
-		String body = "This is Memo body";
-		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
-		Memo memo1 = Memo.create(title, body, author);
-		Memo memo2 = Memo.create(title, body, author);
+		Member author = createMemberWithId(1L);
+		Memo memo1 = createMemoWithIdAndMember(1L, author);
+		Memo memo2 = createMemoWithIdAndMember(2L, author);
 
+		List<Memo> memoList = List.of(memo1, memo2);
 		when(memoRepository.findAllByAuthor(author))
-			.thenReturn(List.of(memo1, memo2));
+			.thenReturn(memoList);
 
 		//when
 		List<Memo> ownedMemosAll = memoService.getOwnedMemosAll(author);
 
 		//then
-		Assertions.assertThat(ownedMemosAll).isNotNull();
-		Assertions.assertThat(ownedMemosAll.size()).isEqualTo(2L);
-		Assertions.assertThat(ownedMemosAll.getFirst()).isNotNull();
-		Assertions.assertThat(ownedMemosAll.getFirst().getTitle()).isEqualTo(title);
-		Assertions.assertThat(ownedMemosAll.getFirst().getBody()).isEqualTo(body);
+		assertThat(ownedMemosAll).isSameAs(memoList);
+
+		verify(memoRepository).findAllByAuthor(author);
 	}
 
 	@Test
-	@DisplayName("메모 수정 - 성공")
-	public void update_memo_success() {
+	@DisplayName("getOwnedMemosAll(): 작성한 메모가 없을 때, 자신이 작성한 모든 메모 리스트 조회 시 빈 리스트 반환")
+	public void getOwnedMemosAll_whenMemoDoesNotExist() {
 		//given
-		String title = "memo title";
-		String body = "This is Memo body";
-		String updatedTitle = "memo title, updated";
-		String updatedBody = "This is Memo body, updated";
+		Member author = createMemberWithId(1L);
 
-		Long memoId = 1L;
-		Long authorId = 1L;
+		List<Memo> memoList = List.of();
+		when(memoRepository.findAllByAuthor(author))
+			.thenReturn(memoList);
 
-		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
-		ReflectionTestUtils.setField(author, "id", authorId);
+		//when
+		List<Memo> ownedMemosAll = memoService.getOwnedMemosAll(author);
 
-		Memo memo = Memo.create(title, body, author);
-		when(memoRepository.findByIdAndAuthor(memoId, author))
+		//then
+		assertThat(ownedMemosAll).isSameAs(memoList);
+
+		verify(memoRepository).findAllByAuthor(author);
+	}
+
+	@Test
+	@DisplayName("updateMemo(): 자신이 작성한 메모 수정")
+	public void updateMemo() {
+		//given
+		Member author = createMemberWithId(1L);
+		Memo memo = createMemoWithIdAndMember(1L, author);
+
+		UpdateMemoDto dto = new UpdateMemoDto(memo.getId(), author, "updated title", "updated body");
+		when(memoRepository.findByIdAndAuthor(dto.getMemoId(), dto.getAuthor()))
 			.thenReturn(Optional.of(memo));
 
 		//when
-		Memo result = memoService.updateMemo(
-			new UpdateMemoDto(memoId, author, updatedTitle, updatedBody));
+		Memo result = memoService.updateMemo(dto);
 
 		//then
-		Assertions.assertThat(result).isNotNull();
-		Assertions.assertThat(result.getTitle()).isEqualTo(updatedTitle);
-		Assertions.assertThat(result.getBody()).isEqualTo(updatedBody);
-		Assertions.assertThat(result.getAuthor()).isEqualTo(author);
+		assertThat(result).isSameAs(memo);
+		assertThat(result.getTitle()).isEqualTo(dto.getTitle());
+		assertThat(result.getBody()).isEqualTo(dto.getBody());
+
+		verify(memoRepository).findByIdAndAuthor(dto.getMemoId(), dto.getAuthor());
 	}
 
 	@Test
-	@DisplayName("다른 작성자의 메모 수정 - 실패")
-	public void update_memo_fail_when_not_mine() {
+	@DisplayName("updateMemo(): 자신이 작성하지 않은 또는 존재하지 않는 메모를 수정 하는 경우 예외 발생")
+	public void updateMemo_whenMemoDoesNotExist() {
 		//given
-		String updatedTitle = "memo title, updated";
-		String updatedBody = "This is Memo body, updated";
+		Long notExistMemoId = 999L;
 
-		Long authorId = 3L;
-		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
-		ReflectionTestUtils.setField(author, "id", authorId);
+		Member author = createMemberWithId(1L);
+		UpdateMemoDto dto = new UpdateMemoDto(notExistMemoId, author, "updated title", "updated body");
 
-		Long notAuthorId = 2L;
-		Member notAuthor = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567891"), "nickname", "email");
-		ReflectionTestUtils.setField(notAuthor, "id", notAuthorId);
-
-		Long memoId = 1L;
-		when(memoRepository.findByIdAndAuthor(memoId, notAuthor))
-			.thenReturn(Optional.empty());
-
-		//when
-		Assertions.assertThatThrownBy(
-				() -> memoService.updateMemo(new UpdateMemoDto(memoId, notAuthor, updatedTitle, updatedBody)))
-			.isInstanceOf(MemoNotFoundException.class);
-	}
-
-	@Test
-	@DisplayName("존재하지 않는 메모 수정 - 실패")
-	public void update_memo_fail_when_memo_not_found() {
-		//given
-		Long notExistMemoId = 1L;
-		String updatedTitle = "memo title, updated";
-		String updatedBody = "This is Memo body, updated";
-
-		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
 		when(memoRepository.findByIdAndAuthor(notExistMemoId, author))
 			.thenReturn(Optional.empty());
 
 		//when
-		Assertions.assertThatThrownBy(
-				() -> memoService.updateMemo(new UpdateMemoDto(notExistMemoId, author, updatedTitle, updatedBody)))
+		assertThatThrownBy(
+			() -> memoService.updateMemo(dto))
 			.isInstanceOf(MemoNotFoundException.class);
+
+		verify(memoRepository).findByIdAndAuthor(dto.getMemoId(), dto.getAuthor());
 	}
 
 	@Test
-	@DisplayName("메모 삭제 - 성공")
-	public void delete_memo_success() {
+	@DisplayName("removeMemo(): 자신이 작성한 특정 메모 삭제")
+	public void removeMemo() {
 		//given
-		Long authorId = 1L;
-		Member author = Member.create(new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
-		ReflectionTestUtils.setField(author, "id", authorId);
+		Member author = createMemberWithId(1L);
+		Memo memo = createMemoWithIdAndMember(1L, author);
 
-		Long memoId = 1L;
-		String title = "memo title";
-		String body = "This is Memo body";
-		Memo memo = Memo.create(title, body, author);
+		RemoveMemoDto dto = new RemoveMemoDto(memo.getId(), author);
 
-		when(memoRepository.findByIdAndAuthor(memoId, author))
+		when(memoRepository.findByIdAndAuthor(dto.getMemoId(), dto.getAuthor()))
 			.thenReturn(Optional.of(memo));
 
 		//when
-		memoService.removeMemo(
-			new RemoveMemoDto(memoId, author));
+		memoService.removeMemo(dto);
 
 		//then
-		verify(memoRepository).findByIdAndAuthor(memoId, author);
+		verify(memoRepository).findByIdAndAuthor(dto.getMemoId(), dto.getAuthor());
 		verify(memoRepository).delete(memo);
 	}
 
 	@Test
-	@DisplayName("다른 작성자의 메모 삭제 - 실패")
-	public void delete_memo_fail_when_not_mine() {
+	@DisplayName("removeMemo(): 자신이 작성하지 않은 또는 존재하지 않는 메모 삭제하는 경우 예외 발생")
+	public void removeMemo_whenMemoDoesNotExist() {
 		//given
-		Long authorId = 1L;
-		Member author = Member.create(
-			new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
-		ReflectionTestUtils.setField(author, "id", authorId);
-
-		Long notAuthorId = 2L;
-		Member notAuthor = Member.create(
-			new OAuthIdentity(ProviderType.GOOGLE, "1234567899"), "nickna2me", "email");
-		ReflectionTestUtils.setField(notAuthor, "id", notAuthorId);
-
-		Long memoId = 1L;
-		String title = "memo title";
-		String body = "This is Memo body";
-		Memo memo = Memo.create(title, body, author);
-
-		when(memoRepository.findByIdAndAuthor(memoId, notAuthor))
-			.thenReturn(Optional.empty());
-
-		//when && then
-		Assertions.assertThatThrownBy(() -> memoService.removeMemo(new RemoveMemoDto(memoId, notAuthor)))
-			.isInstanceOf(MemoNotFoundException.class);
-
-		verify(memoRepository).findByIdAndAuthor(memoId, notAuthor);
-		verify(memoRepository, never()).delete(memo);
-	}
-
-	@Test
-	@DisplayName("존재하지 않는 메모 삭제 - 실패")
-	public void delete_memo_fail_when_memo_not_found() {
-		//given
-		Long notExistMemoId = 1L;
-
-		Long authorId = 1L;
-		Member author = Member.create(
-			new OAuthIdentity(ProviderType.GOOGLE, "1234567890"), "nickname", "email");
-		ReflectionTestUtils.setField(author, "id", authorId);
+		Long notExistMemoId = 999L;
+		Member author = createMemberWithId(1L);
+		RemoveMemoDto dto = new RemoveMemoDto(notExistMemoId, author);
 
 		when(memoRepository.findByIdAndAuthor(notExistMemoId, author))
 			.thenReturn(Optional.empty());
 
 		//when && then
-		Assertions.assertThatThrownBy(() -> memoService.removeMemo(new RemoveMemoDto(notExistMemoId, author)))
+		assertThatThrownBy(() -> memoService.removeMemo(dto))
 			.isInstanceOf(MemoNotFoundException.class);
 
-		verify(memoRepository).findByIdAndAuthor(notExistMemoId, author);
+		verify(memoRepository).findByIdAndAuthor(dto.getMemoId(), dto.getAuthor());
 		verify(memoRepository, never()).delete(any(Memo.class));
+	}
+
+	private Member createMemberWithId(Long id) {
+		ProviderType providerType = ProviderType.GOOGLE;
+		String providerId = "12345678";
+		String nickname = "홍길동";
+		String email = "test@test.com";
+
+		Member member = Member.create(new OAuthIdentity(providerType, providerId), nickname, email);
+		ReflectionTestUtils.setField(member, "id", id);
+		return member;
+	}
+
+	private Memo createMemoWithIdAndMember(Long id, Member member) {
+		Memo memo = Memo.create("title" + id, "body" + id, member);
+		ReflectionTestUtils.setField(memo, "id", id);
+		return memo;
 	}
 }
