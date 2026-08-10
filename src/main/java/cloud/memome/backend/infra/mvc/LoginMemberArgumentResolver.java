@@ -4,6 +4,7 @@ import org.springframework.core.MethodParameter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
@@ -13,6 +14,7 @@ import cloud.memome.backend.api.auth.Login;
 import cloud.memome.backend.api.auth.LoginMember;
 import cloud.memome.backend.infra.security.exception.UnauthenticatedException;
 
+@Component
 public class LoginMemberArgumentResolver implements HandlerMethodArgumentResolver {
 	@Override
 	public boolean supportsParameter(MethodParameter parameter) {

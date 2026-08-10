@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 @Configuration
 @RequiredArgsConstructor
 public class MvcConfig implements WebMvcConfigurer {
-	private final HandlerMethodArgumentResolver loginResolver;
+	private final LoginMemberArgumentResolver loginResolver;
 
 	@Override
 	public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
