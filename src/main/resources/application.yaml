@@ -6,6 +6,42 @@ spring:
       enabled: true
   messages:
     basename: messages, errors
+logging.level:
+  cloud.memome.backend: INFO
+  org.springframework.security.oauth2: INFO
+  org.springframework.web: INFO
+app:
+  frontend-url: http://localhost:5173
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test
+            client-secret: test
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:memome
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create
+  h2:
+    console.enabled: true
+jwt:
+  secret: 12345678901234567890123456789012
+  issuer: backend.memome.cloud
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
   security:
     oauth2:
       client:
@@ -13,6 +49,7 @@ spring:
           google:
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
+            redirect-uri: http://localhost:8080/login/oauth2/code/google
           kakao:
             client-id: ${KAKAO_CLIENT_ID}
             client-secret: ${KAKAO_CLIENT_SECRET}
@@ -28,16 +65,65 @@ spring:
             userinfo-uri: https://kapi.kakao.com/v1/oidc/userinfo
             jwk-set-uri: https://kauth.kakao.com/.well-known/jwks.json
             user-name-attribute: sub
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:memome
+    username: sa
+    password:
   jpa:
+    hibernate:
+      ddl-auto: create
     properties:
       hibernate:
         show_sql: true
         format_sql: true
-
+  h2:
+    console.enabled: true
 jwt:
   secret: ${JWT_SECRET}
   issuer: backend.memome.cloud
 logging.level:
-  cloud.memome.backend: INFO
-  org.springframework.security.oauth2: INFO
-  org.springframework.web: INFO
+  org.springframework.web: TRACE
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            redirect-uri: ${SERVER_URI}/login/oauth2/code/google
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID}
+            client-secret: ${KAKAO_CLIENT_SECRET}
+            scope: openid, profile_nickname, account_email
+            authorization-grant-type: authorization_code
+            redirect-uri: ${SERVER_URI}/login/oauth2/code/kakao
+            client-name: Kakao
+            client-authentication-method: client_secret_post
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            userinfo-uri: https://kapi.kakao.com/v1/oidc/userinfo
+            jwk-set-uri: https://kauth.kakao.com/.well-known/jwks.json
+            user-name-attribute: sub
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${PROD_DB_URL}
+    username: ${PROD_DB_USERNAME}
+    password: ${PROD_DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: none
+  data:
+    redis:
+      host: redis
+      port: 6379
+jwt:
+  secret: ${JWT_SECRET}
+  issuer: backend.memome.cloud

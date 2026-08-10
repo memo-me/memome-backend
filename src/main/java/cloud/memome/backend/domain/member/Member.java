@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -14,12 +15,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"provider_type", "provider_id"}))
+@Table(name = "member", uniqueConstraints = @UniqueConstraint(columnNames = {"provider_type", "provider_id"}))
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class Member {
 	@Id
-	@GeneratedValue
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
 	@Embedded
