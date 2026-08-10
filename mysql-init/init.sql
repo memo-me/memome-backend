@@ -1,5 +1,5 @@
 CREATE TABLE member (
-    id INT NOT NULL AUTO_INCREMENT,
+    id BIGINT NOT NULL AUTO_INCREMENT,
     provider_id VARCHAR(255) NOT NULL,
     provider_type enum('GOOGLE', 'KAKAO') NOT NULL,
     nickname VARCHAR(255) NOT NULL,
@@ -11,10 +11,10 @@ CREATE TABLE member (
 );
 
 CREATE TABLE memo (
-    id INT NOT NULL AUTO_INCREMENT,
+    id BIGINT NOT NULL AUTO_INCREMENT,
     title VARCHAR(255) NOT NULL,
     body LONGTEXT,
-    author_id INT NOT NULL,
+    author_id BIGINT NOT NULL,
     created_at DATETIME NOT NULL,
     updated_at DATETIME NOT NULL,
     PRIMARY KEY(id)
