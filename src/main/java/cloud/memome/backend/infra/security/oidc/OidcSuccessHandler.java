@@ -13,12 +13,18 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
 public class OidcSuccessHandler implements AuthenticationSuccessHandler {
 	private final JwtProvider jwtProvider;
 	private final RefreshTokenService refreshTokenService;
+	private final String frontendUrl;
+
+	public OidcSuccessHandler(JwtProvider jwtProvider, RefreshTokenService refreshTokenService,
+		String frontendUrl) {
+		this.jwtProvider = jwtProvider;
+		this.refreshTokenService = refreshTokenService;
+		this.frontendUrl = frontendUrl;
+	}
 
 	@Override
 	public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -36,6 +42,7 @@ public class OidcSuccessHandler implements AuthenticationSuccessHandler {
 		refresh.setPath("/");
 		response.addCookie(refresh);
 
-		response.sendRedirect("http://localhost:63342/memome-backend/index.html");
+		response.sendRedirect(frontendUrl + "/oauth/callback");
+		// response.sendRedirect("http://localhost:63342/memome-backend/index.html");
 	}
 }

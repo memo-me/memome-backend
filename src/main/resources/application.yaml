@@ -10,6 +10,8 @@ logging.level:
   cloud.memome.backend: INFO
   org.springframework.security.oauth2: INFO
   org.springframework.web: INFO
+app:
+  frontend-url: http://localhost:5173
 ---
 spring:
   config:

@@ -3,6 +3,7 @@ package cloud.memome.backend.infra.security.config;
 import java.time.Duration;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -25,15 +26,22 @@ import cloud.memome.backend.infra.security.jwt.JwtLogoutHandler;
 import cloud.memome.backend.infra.security.jwt.JwtProvider;
 import cloud.memome.backend.infra.security.oidc.MyOidcService;
 import cloud.memome.backend.infra.security.oidc.OidcSuccessHandler;
-import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 public class AuthConfig {
 	private final MemberService memberService;
 	private final RefreshTokenService refreshTokenService;
 	private final JwtProvider jwtProvider;
+	private final String frontendUrl;
+
+	public AuthConfig(MemberService memberService, RefreshTokenService refreshTokenService, JwtProvider jwtProvider,
+		@Value("${app.frontend-url}") String frontendUrl) {
+		this.memberService = memberService;
+		this.refreshTokenService = refreshTokenService;
+		this.jwtProvider = jwtProvider;
+		this.frontendUrl = frontendUrl;
+	}
 
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -46,7 +54,7 @@ public class AuthConfig {
 				.addLogoutHandler(new JwtLogoutHandler(jwtProvider, refreshTokenService))
 				.logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.OK)))
 			.oauth2Login(oauth2 -> oauth2
-				.successHandler(new OidcSuccessHandler(jwtProvider, refreshTokenService))
+				.successHandler(new OidcSuccessHandler(jwtProvider, refreshTokenService, frontendUrl))
 				.userInfoEndpoint(userinfo -> userinfo
 					.oidcUserService(oidcUserService())))
 			.formLogin(AbstractHttpConfigurer::disable)
@@ -70,8 +78,9 @@ public class AuthConfig {
 
 	private UrlBasedCorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.setAllowedOrigins(List.of("http://localhost:63342")); //TODO: frontend???
-		configuration.setAllowedMethods(List.of("GET", "POST"));
+		// configuration.setAllowedOrigins(List.of("http://localhost:63342")); //index.html
+		configuration.setAllowedOrigins(List.of(frontendUrl));
+		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
 		configuration.setAllowCredentials(true);
 		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
 		configuration.setExposedHeaders(List.of("Authorization"));
