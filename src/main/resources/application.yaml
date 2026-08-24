@@ -11,7 +11,7 @@ logging.level:
   org.springframework.security.oauth2: INFO
   org.springframework.web: INFO
 app:
-  frontend-url: http://localhost:5173
+  frontend-url: ${CLIENT_URI}
 ---
 spring:
   config:
@@ -37,6 +37,8 @@ spring:
 jwt:
   secret: 12345678901234567890123456789012
   issuer: backend.memome.cloud
+app:
+  frontend-url: http://localhost:5173
 ---
 spring:
   config:
