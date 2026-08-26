@@ -55,7 +55,7 @@ class MemoControllerTest {
 	private final static Long LOGIN_MEMBER_ID = 1L;
 
 	@Test
-	@DisplayName("GET /memos: 로그인한 회원이 작성한 모든 메모 요약 리스트 조회")
+	@DisplayName("GET /api/memos: 로그인한 회원이 작성한 모든 메모 요약 리스트 조회")
 	public void getMemoSummaryList() throws Exception {
 		//given
 		Member member = createMemberWithId(LOGIN_MEMBER_ID);
@@ -68,7 +68,7 @@ class MemoControllerTest {
 
 		//when & then
 		MemoListResponse.MemoSummary firstSummary = new MemoListResponse.MemoSummary(memoList.getFirst());
-		mockMvc.perform(get("/memos"))
+		mockMvc.perform(get("/api/memos"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.count").value(memoList.size()))
 			.andExpect(jsonPath("$.memoSummaryList.length()").value(memoList.size()))
@@ -83,7 +83,7 @@ class MemoControllerTest {
 	}
 
 	@Test
-	@DisplayName("GET /memos: 로그인한 회원이 작성한 모든 메모 요약 리스트 조회 시 메모가 없는 경우 200 반환")
+	@DisplayName("GET /api/memos: 로그인한 회원이 작성한 모든 메모 요약 리스트 조회 시 메모가 없는 경우 200 반환")
 	public void getMemoSummaryList_whenMemoDoesNotExist() throws Exception {
 		//given
 		Member member = createMemberWithId(LOGIN_MEMBER_ID);
@@ -95,7 +95,7 @@ class MemoControllerTest {
 			.thenReturn(memoList);
 
 		//when & then
-		mockMvc.perform(get("/memos"))
+		mockMvc.perform(get("/api/memos"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.count").value(memoList.size()))
 			.andExpect(jsonPath("$.memoSummaryList.length()").value(memoList.size()));
@@ -105,27 +105,27 @@ class MemoControllerTest {
 	}
 
 	@Test
-	@DisplayName("GET /memos: 로그인한 회원이 작성한 모든 메모 요약 리스트 조회 시 회원이 존재하지 않는 경우 404 반환")
+	@DisplayName("GET /api/memos: 로그인한 회원이 작성한 모든 메모 요약 리스트 조회 시 회원이 존재하지 않는 경우 404 반환")
 	public void getMemoSummaryList_whenMemberDoesNotExist() throws Exception {
 		//given
 		when(memberService.getMemberById(LOGIN_MEMBER_ID))
 			.thenThrow(new NoSuchMemberException());
 
 		//when & then
-		mockMvc.perform(get("/memos"))
+		mockMvc.perform(get("/api/memos"))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
 			.andExpect(jsonPath("$.detail").value(new NoSuchMemberException().getMessage()))
-			.andExpect(jsonPath("$.instance").value("/memos"));
+			.andExpect(jsonPath("$.instance").value("/api/memos"));
 
 		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
 		verify(memoService, never()).getOwnedMemosAll(any(Member.class));
 	}
 
 	@Test
-	@DisplayName("POST /memos/{id}: 특정 메모 작성")
+	@DisplayName("POST /api/memos/{id}: 특정 메모 작성")
 	public void writeNewMemo() throws Exception {
 		//given
 		Member member = createMemberWithId(LOGIN_MEMBER_ID);
@@ -140,7 +140,7 @@ class MemoControllerTest {
 		WriteNewMemoRequest request = new WriteNewMemoRequest(memo.getTitle(), memo.getBody());
 
 		//when & then
-		mockMvc.perform(post("/memos")
+		mockMvc.perform(post("/api/memos")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isOk())
@@ -155,7 +155,7 @@ class MemoControllerTest {
 	}
 
 	@Test
-	@DisplayName("POST /memos: 존재하지 않는 회원이 메모 작성 시 404 반환")
+	@DisplayName("POST /api/memos: 존재하지 않는 회원이 메모 작성 시 404 반환")
 	public void writeNewMemo_whenMemberDoesNotExist() throws Exception {
 		//given
 		Member member = createMemberWithId(LOGIN_MEMBER_ID);
@@ -167,7 +167,7 @@ class MemoControllerTest {
 		WriteNewMemoRequest request = new WriteNewMemoRequest(memo.getTitle(), memo.getBody());
 
 		//when & then
-		mockMvc.perform(post("/memos")
+		mockMvc.perform(post("/api/memos")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isNotFound())
@@ -175,14 +175,14 @@ class MemoControllerTest {
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
 			.andExpect(jsonPath("$.detail").value(new NoSuchMemberException().getMessage()))
-			.andExpect(jsonPath("$.instance").value("/memos"));
+			.andExpect(jsonPath("$.instance").value("/api/memos"));
 
 		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
 		verify(memoService, never()).createNewMemo(any(CreateMemoDto.class));
 	}
 
 	@Test
-	@DisplayName("GET /memos/{id}: 특정 메모 조회")
+	@DisplayName("GET /api/memos/{id}: 특정 메모 조회")
 	public void getMemo() throws Exception {
 		//given
 		Member member = createMemberWithId(LOGIN_MEMBER_ID);
@@ -196,7 +196,7 @@ class MemoControllerTest {
 			.thenReturn(memo);
 
 		//when & then
-		mockMvc.perform(get("/memos/{id}", memo.getId()))
+		mockMvc.perform(get("/api/memos/{id}", memo.getId()))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.id").value(memo.getId()))
 			.andExpect(jsonPath("$.title").value(memo.getTitle()))
@@ -209,7 +209,7 @@ class MemoControllerTest {
 	}
 
 	@Test
-	@DisplayName("GET /memos/{id}: 존재하지 않는 메모 조회 시 404 반환")
+	@DisplayName("GET /api/memos/{id}: 존재하지 않는 메모 조회 시 404 반환")
 	public void getMemo_whenMemoDoesNotExist() throws Exception {
 		//given
 		Member member = createMemberWithId(LOGIN_MEMBER_ID);
@@ -223,20 +223,20 @@ class MemoControllerTest {
 			.thenThrow(new MemoNotFoundException());
 
 		//when & then
-		mockMvc.perform(get("/memos/{id}", memo.getId()))
+		mockMvc.perform(get("/api/memos/{id}", memo.getId()))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
 			.andExpect(jsonPath("$.detail").value(new MemoNotFoundException().getMessage()))
-			.andExpect(jsonPath("$.instance").value("/memos/" + memo.getId()));
+			.andExpect(jsonPath("$.instance").value("/api/memos/" + memo.getId()));
 
 		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
 		verify(memoService).getOwnedMemo(dto);
 	}
 
 	@Test
-	@DisplayName("GET /memos/{id}: 존재하지 않는 회원이 메모 조회 시 404 반환")
+	@DisplayName("GET /api/memos/{id}: 존재하지 않는 회원이 메모 조회 시 404 반환")
 	public void getMemo_whenMemberDoesNotExist() throws Exception {
 		//given
 		Long memoId = 1L;
@@ -245,20 +245,20 @@ class MemoControllerTest {
 			.thenThrow(new NoSuchMemberException());
 
 		//when & then
-		mockMvc.perform(get("/memos/{id}", memoId))
+		mockMvc.perform(get("/api/memos/{id}", memoId))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
 			.andExpect(jsonPath("$.detail").value(new NoSuchMemberException().getMessage()))
-			.andExpect(jsonPath("$.instance").value("/memos/" + memoId));
+			.andExpect(jsonPath("$.instance").value("/api/memos/" + memoId));
 
 		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
 		verify(memoService, never()).getOwnedMemo(any(GetOwnedMemoDto.class));
 	}
 
 	@Test
-	@DisplayName("PUT /memos/{id}: 특정 메모 수정")
+	@DisplayName("PUT /api/memos/{id}: 특정 메모 수정")
 	public void modifyMemo() throws Exception {
 		//given
 		Member member = createMemberWithId(LOGIN_MEMBER_ID);
@@ -275,7 +275,7 @@ class MemoControllerTest {
 		ModifyMemoRequest request = new ModifyMemoRequest(updatedMemo.getTitle(), updatedMemo.getBody());
 
 		//when & then
-		mockMvc.perform(put("/memos/{id}", updatedMemo.getId())
+		mockMvc.perform(put("/api/memos/{id}", updatedMemo.getId())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isOk())
@@ -290,7 +290,7 @@ class MemoControllerTest {
 	}
 
 	@Test
-	@DisplayName("PUT /memos/{id}: 메모 제목을 null로 수정 시 400 반환")
+	@DisplayName("PUT /api/memos/{id}: 메모 제목을 null로 수정 시 400 반환")
 	public void modifyMemo_whenTitleIsNull() throws Exception {
 		//given
 		Member member = createMemberWithId(LOGIN_MEMBER_ID);
@@ -300,14 +300,14 @@ class MemoControllerTest {
 		ModifyMemoRequest request = new ModifyMemoRequest(updatedMemo.getTitle(), updatedMemo.getBody());
 
 		//when & then
-		mockMvc.perform(put("/memos/{id}", updatedMemo.getId())
+		mockMvc.perform(put("/api/memos/{id}", updatedMemo.getId())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Bad Request"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.instance").value("/memos/" + updatedMemo.getId()))
+			.andExpect(jsonPath("$.instance").value("/api/memos/" + updatedMemo.getId()))
 			.andExpect(jsonPath("$.errors.length()").value(1))
 			.andExpect(jsonPath("$.errors[*].field").value("title"))
 			.andExpect(jsonPath("$.errors[*].message").exists());
@@ -317,7 +317,7 @@ class MemoControllerTest {
 	}
 
 	@Test
-	@DisplayName("PUT /memos/{id}: 메모 제목을 빈문자열로 수정 시 400 반환")
+	@DisplayName("PUT /api/memos/{id}: 메모 제목을 빈문자열로 수정 시 400 반환")
 	public void modifyMemo_whenTitleIsBlank() throws Exception {
 		//given
 		Member member = createMemberWithId(LOGIN_MEMBER_ID);
@@ -327,14 +327,14 @@ class MemoControllerTest {
 		ModifyMemoRequest request = new ModifyMemoRequest(updatedMemo.getTitle(), updatedMemo.getBody());
 
 		//when & then
-		mockMvc.perform(put("/memos/{id}", updatedMemo.getId())
+		mockMvc.perform(put("/api/memos/{id}", updatedMemo.getId())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Bad Request"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.instance").value("/memos/" + updatedMemo.getId()))
+			.andExpect(jsonPath("$.instance").value("/api/memos/" + updatedMemo.getId()))
 			.andExpect(jsonPath("$.errors.length()").value(1))
 			.andExpect(jsonPath("$.errors[*].field").value("title"))
 			.andExpect(jsonPath("$.errors[*].message").exists());
@@ -344,7 +344,7 @@ class MemoControllerTest {
 	}
 
 	@Test
-	@DisplayName("PUT /memos/{id}: 메모 본문을 null로 수정 시 400 반환")
+	@DisplayName("PUT /api/memos/{id}: 메모 본문을 null로 수정 시 400 반환")
 	public void modifyMemo_whenBodyIsNull() throws Exception {
 		//given
 		Member member = createMemberWithId(LOGIN_MEMBER_ID);
@@ -354,14 +354,14 @@ class MemoControllerTest {
 		ModifyMemoRequest request = new ModifyMemoRequest(updatedMemo.getTitle(), updatedMemo.getBody());
 
 		//when & then
-		mockMvc.perform(put("/memos/{id}", updatedMemo.getId())
+		mockMvc.perform(put("/api/memos/{id}", updatedMemo.getId())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Bad Request"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.instance").value("/memos/" + updatedMemo.getId()))
+			.andExpect(jsonPath("$.instance").value("/api/memos/" + updatedMemo.getId()))
 			.andExpect(jsonPath("$.errors.length()").value(1))
 			.andExpect(jsonPath("$.errors[*].field").value("body"))
 			.andExpect(jsonPath("$.errors[*].message").exists());
@@ -371,7 +371,7 @@ class MemoControllerTest {
 	}
 
 	@Test
-	@DisplayName("PUT /memos/{id}: 메모 본문을 빈문자열로 수정 시 400 반환")
+	@DisplayName("PUT /api/memos/{id}: 메모 본문을 빈문자열로 수정 시 400 반환")
 	public void modifyMemo_whenBodyIsBlank() throws Exception {
 		//given
 		Member member = createMemberWithId(LOGIN_MEMBER_ID);
@@ -381,14 +381,14 @@ class MemoControllerTest {
 		ModifyMemoRequest request = new ModifyMemoRequest(updatedMemo.getTitle(), updatedMemo.getBody());
 
 		//when & then
-		mockMvc.perform(put("/memos/{id}", updatedMemo.getId())
+		mockMvc.perform(put("/api/memos/{id}", updatedMemo.getId())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Bad Request"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.instance").value("/memos/" + updatedMemo.getId()))
+			.andExpect(jsonPath("$.instance").value("/api/memos/" + updatedMemo.getId()))
 			.andExpect(jsonPath("$.errors.length()").value(1))
 			.andExpect(jsonPath("$.errors[*].field").value("body"))
 			.andExpect(jsonPath("$.errors[*].message").exists());
@@ -398,7 +398,7 @@ class MemoControllerTest {
 	}
 
 	@Test
-	@DisplayName("PUT /memos/{id}: 존재하지 않는 메모를 수정할 때 404 반환")
+	@DisplayName("PUT /api/memos/{id}: 존재하지 않는 메모를 수정할 때 404 반환")
 	public void modifyMemo_whenMemoDoesNotExist() throws Exception {
 		//given
 		Member member = createMemberWithId(LOGIN_MEMBER_ID);
@@ -413,7 +413,7 @@ class MemoControllerTest {
 		ModifyMemoRequest request = new ModifyMemoRequest(updatedMemo.getTitle(), updatedMemo.getBody());
 
 		//when & then
-		mockMvc.perform(put("/memos/{id}", updatedMemo.getId())
+		mockMvc.perform(put("/api/memos/{id}", updatedMemo.getId())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isNotFound())
@@ -421,14 +421,14 @@ class MemoControllerTest {
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
 			.andExpect(jsonPath("$.detail").value(new MemoNotFoundException().getMessage()))
-			.andExpect(jsonPath("$.instance").value("/memos/" + updatedMemo.getId()));
+			.andExpect(jsonPath("$.instance").value("/api/memos/" + updatedMemo.getId()));
 
 		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
 		verify(memoService).updateMemo(any(UpdateMemoDto.class));
 	}
 
 	@Test
-	@DisplayName("PUT /memos/{id}: 존재하지 않는 회원이 메모 수정을 시도할 때")
+	@DisplayName("PUT /api/memos/{id}: 존재하지 않는 회원이 메모 수정을 시도할 때")
 	public void modifyMemo_whenMemberDoesNotExist() throws Exception {
 		//given
 		Long memoId = 1L;
@@ -439,7 +439,7 @@ class MemoControllerTest {
 		ModifyMemoRequest request = new ModifyMemoRequest("title", "body");
 
 		//when & then
-		mockMvc.perform(put("/memos/{id}", memoId)
+		mockMvc.perform(put("/api/memos/{id}", memoId)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isNotFound())
@@ -447,14 +447,14 @@ class MemoControllerTest {
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
 			.andExpect(jsonPath("$.detail").value(new NoSuchMemberException().getMessage()))
-			.andExpect(jsonPath("$.instance").value("/memos/" + memoId));
+			.andExpect(jsonPath("$.instance").value("/api/memos/" + memoId));
 
 		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
 		verify(memoService, never()).updateMemo(any(UpdateMemoDto.class));
 	}
 
 	@Test
-	@DisplayName("DELETE /memos/{id}: 특정 메모 삭제")
+	@DisplayName("DELETE /api/memos/{id}: 특정 메모 삭제")
 	public void deleteMemo() throws Exception {
 		//given
 		Member member = createMemberWithId(LOGIN_MEMBER_ID);
@@ -464,7 +464,7 @@ class MemoControllerTest {
 			.thenReturn(member);
 
 		//when & then
-		mockMvc.perform(delete("/memos/{id}", memoId))
+		mockMvc.perform(delete("/api/memos/{id}", memoId))
 			.andExpect(status().isNoContent());
 
 		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
@@ -472,7 +472,7 @@ class MemoControllerTest {
 	}
 
 	@Test
-	@DisplayName("DELETE /memos/{id}: 존재하지 않는 메모 삭제 시 404 반환")
+	@DisplayName("DELETE /api/memos/{id}: 존재하지 않는 메모 삭제 시 404 반환")
 	public void deleteMemo_whenMemoDoesNotExist() throws Exception {
 		//given
 		Member member = createMemberWithId(LOGIN_MEMBER_ID);
@@ -485,20 +485,20 @@ class MemoControllerTest {
 			.when(memoService).removeMemo(dto);
 
 		//when & then
-		mockMvc.perform(delete("/memos/{id}", memoId))
+		mockMvc.perform(delete("/api/memos/{id}", memoId))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
 			.andExpect(jsonPath("$.detail").value(new MemoNotFoundException().getMessage()))
-			.andExpect(jsonPath("$.instance").value("/memos/" + memoId));
+			.andExpect(jsonPath("$.instance").value("/api/memos/" + memoId));
 
 		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
 		verify(memoService).removeMemo(dto);
 	}
 
 	@Test
-	@DisplayName("DELETE /memos/{id}: 존재하지 않는 회원이 메모 삭제 시도 시 404 반환")
+	@DisplayName("DELETE /api/memos/{id}: 존재하지 않는 회원이 메모 삭제 시도 시 404 반환")
 	public void deleteMemo_whenMemberDoesNotExist() throws Exception {
 		//given
 		Long memoId = 1L;
@@ -507,13 +507,13 @@ class MemoControllerTest {
 			.thenThrow(new NoSuchMemberException());
 
 		//when & then
-		mockMvc.perform(delete("/memos/{id}", memoId))
+		mockMvc.perform(delete("/api/memos/{id}", memoId))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
 			.andExpect(jsonPath("$.detail").value(new NoSuchMemberException().getMessage()))
-			.andExpect(jsonPath("$.instance").value("/memos/" + memoId));
+			.andExpect(jsonPath("$.instance").value("/api/memos/" + memoId));
 
 		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
 		verify(memoService, never()).removeMemo(any(RemoveMemoDto.class));

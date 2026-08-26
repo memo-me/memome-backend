@@ -41,7 +41,7 @@ import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Memo", description = "메모 관련 API")
 @RestController
-@RequestMapping("/memos")
+@RequestMapping("/api/memos")
 @RequiredArgsConstructor
 public class MemoController {
 	private final MemoService memoService;

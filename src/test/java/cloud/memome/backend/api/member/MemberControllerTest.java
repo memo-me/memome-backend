@@ -44,7 +44,7 @@ class MemberControllerTest {
 	private static final Long LOGIN_MEMBER_ID = 1L;
 
 	@Test
-	@DisplayName("GET /members/me: 로그인 회원의 정보 반환")
+	@DisplayName("GET /api/members/me: 로그인 회원의 정보 반환")
 	public void getAccountInfo() throws Exception {
 		//given
 		Member member = createMemberWithId(LOGIN_MEMBER_ID);
@@ -53,7 +53,7 @@ class MemberControllerTest {
 			.thenReturn(member);
 
 		//when && then
-		mockMvc.perform(get("/members/me"))
+		mockMvc.perform(get("/api/members/me"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.nickname").value(member.getNickname()))
 			.andExpect(jsonPath("$.email").value(member.getEmail()))
@@ -64,26 +64,26 @@ class MemberControllerTest {
 	}
 
 	@Test
-	@DisplayName("GET /members/me: 로그인한 회원이 존재하지 않으면 404 반환")
+	@DisplayName("GET /api/members/me: 로그인한 회원이 존재하지 않으면 404 반환")
 	public void getAccountInfo_whenMemberDoesNotExist() throws Exception {
 		//given
 		when(memberService.getMemberById(LOGIN_MEMBER_ID))
 			.thenThrow(new NoSuchMemberException());
 
 		//when && then
-		mockMvc.perform(get("/members/me"))
+		mockMvc.perform(get("/api/members/me"))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
 			.andExpect(jsonPath("$.detail").value(new NoSuchMemberException().getMessage()))
-			.andExpect(jsonPath("$.instance").value("/members/me"));
+			.andExpect(jsonPath("$.instance").value("/api/members/me"));
 
 		verify(memberService).getMemberById(LOGIN_MEMBER_ID);
 	}
 
 	@Test
-	@DisplayName("PUT /members/me: 로그인한 회원의 정보 수정")
+	@DisplayName("PUT /api/members/me: 로그인한 회원의 정보 수정")
 	public void updateAccountInfo() throws Exception {
 		//given
 		Member updatedMember = createMemberWithId(LOGIN_MEMBER_ID);
@@ -97,7 +97,7 @@ class MemberControllerTest {
 			updatedMember.getEmail());
 
 		//when && then
-		mockMvc.perform(put("/members/me")
+		mockMvc.perform(put("/api/members/me")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isOk())
@@ -110,7 +110,7 @@ class MemberControllerTest {
 	}
 
 	@Test
-	@DisplayName("PUT /members/me: 존재하지 않는 회원의 정보를 수정할 때 404 반환")
+	@DisplayName("PUT /api/members/me: 존재하지 않는 회원의 정보를 수정할 때 404 반환")
 	public void updateAccountInfo_whenMemberDoesNotExist() throws Exception {
 		//given
 		Member updatedMember = createMemberWithId(LOGIN_MEMBER_ID);
@@ -124,7 +124,7 @@ class MemberControllerTest {
 			updatedMember.getEmail());
 
 		//when && then
-		mockMvc.perform(put("/members/me")
+		mockMvc.perform(put("/api/members/me")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isNotFound())
@@ -132,153 +132,153 @@ class MemberControllerTest {
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
 			.andExpect(jsonPath("$.detail").value(new NoSuchMemberException().getMessage()))
-			.andExpect(jsonPath("$.instance").value("/members/me"));
+			.andExpect(jsonPath("$.instance").value("/api/members/me"));
 
 		verify(memberService).updateMember(updatedMember.getId(), updateMemberDto);
 	}
 
 	@Test
-	@DisplayName("PUT /members/me: 닉네임을 null로 수정할 때 400 반환")
+	@DisplayName("PUT /api/members/me: 닉네임을 null로 수정할 때 400 반환")
 	public void updateAccountInfo_whenNicknameIsNull() throws Exception {
 		//given
 		UpdateMyInfoRequest request = new UpdateMyInfoRequest(null, "test@test.com");
 
 		//when && then
-		mockMvc.perform(put("/members/me")
+		mockMvc.perform(put("/api/members/me")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Bad Request"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.instance").value("/members/me"))
+			.andExpect(jsonPath("$.instance").value("/api/members/me"))
 			.andExpect(jsonPath("$.errors[*].field").value(hasItem("nickname")))
 			.andExpect(jsonPath("$.errors[*].message").exists());
 	}
 
 	@Test
-	@DisplayName("PUT /members/me: 이메일을 null로 수정할 때 400 반환")
+	@DisplayName("PUT /api/members/me: 이메일을 null로 수정할 때 400 반환")
 	public void updateAccountInfo_whenEmailIsNull() throws Exception {
 		//given
 		UpdateMyInfoRequest request = new UpdateMyInfoRequest("updated", null);
 
 		//when && then
-		mockMvc.perform(put("/members/me")
+		mockMvc.perform(put("/api/members/me")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Bad Request"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.instance").value("/members/me"))
+			.andExpect(jsonPath("$.instance").value("/api/members/me"))
 			.andExpect(jsonPath("$.errors[*].field").value(hasItem("email")))
 			.andExpect(jsonPath("$.errors[*].message").exists());
 	}
 
 	@Test
-	@DisplayName("PUT /members/me: 닉네임과 이메일을 null로 수정할 때 400 반환")
+	@DisplayName("PUT /api/members/me: 닉네임과 이메일을 null로 수정할 때 400 반환")
 	public void updateAccountInfo_whenNicknameAndEmailIsNull() throws Exception {
 		//given
 		UpdateMyInfoRequest request = new UpdateMyInfoRequest(null, null);
 
 		//when && then
-		mockMvc.perform(put("/members/me")
+		mockMvc.perform(put("/api/members/me")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Bad Request"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.instance").value("/members/me"))
+			.andExpect(jsonPath("$.instance").value("/api/members/me"))
 			.andExpect(jsonPath("$.errors[*].field").value(hasItem("nickname")))
 			.andExpect(jsonPath("$.errors[*].field").value(hasItem("email")))
 			.andExpect(jsonPath("$.errors[*].message").exists());
 	}
 
 	@Test
-	@DisplayName("PUT /members/me: 닉네임을 빈문자열로 수정할 때 400 반환")
+	@DisplayName("PUT /api/members/me: 닉네임을 빈문자열로 수정할 때 400 반환")
 	public void updateAccountInfo_whenNicknameIsBlank() throws Exception {
 		//given
 		UpdateMyInfoRequest request = new UpdateMyInfoRequest("   ", "test@test.com");
 
 		//when && then
-		mockMvc.perform(put("/members/me")
+		mockMvc.perform(put("/api/members/me")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Bad Request"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.instance").value("/members/me"))
+			.andExpect(jsonPath("$.instance").value("/api/members/me"))
 			.andExpect(jsonPath("$.errors[*].field").value(hasItem("nickname")))
 			.andExpect(jsonPath("$.errors[*].message").exists());
 	}
 
 	@Test
-	@DisplayName("PUT /members/me: 이메일을 빈문자열로 수정할 때 400 반환")
+	@DisplayName("PUT /api/members/me: 이메일을 빈문자열로 수정할 때 400 반환")
 	public void updateAccountInfo_whenEmailIsBlank() throws Exception {
 		//given
 		UpdateMyInfoRequest request = new UpdateMyInfoRequest("updated", "     ");
 
 		//when && then
-		mockMvc.perform(put("/members/me")
+		mockMvc.perform(put("/api/members/me")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Bad Request"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.instance").value("/members/me"))
+			.andExpect(jsonPath("$.instance").value("/api/members/me"))
 			.andExpect(jsonPath("$.errors[*].field").value(hasItem("email")))
 			.andExpect(jsonPath("$.errors[*].message").exists());
 	}
 
 	@Test
-	@DisplayName("PUT /members/me: 이메일 형식을 따르지 않은 이메일로 수정할 때 400 반환")
+	@DisplayName("PUT /api/members/me: 이메일 형식을 따르지 않은 이메일로 수정할 때 400 반환")
 	public void updateAccountInfo_whenEmailIsNotRegex() throws Exception {
 		//given
 		UpdateMyInfoRequest request = new UpdateMyInfoRequest("updated", "github.com");
 
 		//when && then
-		mockMvc.perform(put("/members/me")
+		mockMvc.perform(put("/api/members/me")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Bad Request"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-			.andExpect(jsonPath("$.instance").value("/members/me"))
+			.andExpect(jsonPath("$.instance").value("/api/members/me"))
 			.andExpect(jsonPath("$.errors[*].field").value(hasItem("email")))
 			.andExpect(jsonPath("$.errors[*].message").exists());
 	}
 
 	@Test
-	@DisplayName("DELETE /members/me: 로그인 회원 탈퇴")
+	@DisplayName("DELETE /api/members/me: 로그인 회원 탈퇴")
 	public void deleteAccount() throws Exception {
 		//given
 
 		//when && then
-		mockMvc.perform(delete("/members/me"))
+		mockMvc.perform(delete("/api/members/me"))
 			.andExpect(status().isNoContent());
 
 		verify(memberService).removeMember(LOGIN_MEMBER_ID);
 	}
 
 	@Test
-	@DisplayName("DELETE /members/me: 존재하지 않는 회원 탈퇴 시도 시, 404 반환")
+	@DisplayName("DELETE /api/members/me: 존재하지 않는 회원 탈퇴 시도 시, 404 반환")
 	public void deleteAccount_whenMemberDoesNotExist() throws Exception {
 		//given
 		doThrow(new NoSuchMemberException())
 			.when(memberService).removeMember(LOGIN_MEMBER_ID);
 
 		//when && then
-		mockMvc.perform(delete("/members/me"))
+		mockMvc.perform(delete("/api/members/me"))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.type").value("about:blank"))
 			.andExpect(jsonPath("$.title").value("Not Found"))
 			.andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
 			.andExpect(jsonPath("$.detail").value(new NoSuchMemberException().getMessage()))
-			.andExpect(jsonPath("$.instance").value("/members/me"));
+			.andExpect(jsonPath("$.instance").value("/api/members/me"));
 
 		verify(memberService).removeMember(LOGIN_MEMBER_ID);
 	}
