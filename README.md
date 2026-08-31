@@ -5,7 +5,7 @@
 ## Key Feature
 
 - 메모를 작성/조회/수정/삭제 할 수 있습니다.
-- OAuth2.0/OIDC 기반의 소셜 로그인 지원을 지원합니다.
+- OAuth2.0/OIDC 기반의 소셜 로그인을 지원합니다.
 - JWT 기반 Stateless 인증 구조를 구현하였습니다.
 
 ## Tech Stack
@@ -20,15 +20,13 @@
 
 ## Architecture
 
-### Authentication Architecture
+## API Documentation
 
-### Deployment Architecture
+![API](image/api.png)
 
 ### ERD
 
 ![ERD](image/erd.png)
-
-## API Documentation
 
 ## Trouble Shooting
 
