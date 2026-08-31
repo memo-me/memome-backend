@@ -65,7 +65,7 @@ public class AuthConfig {
 				.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
 			.authorizeHttpRequests(request -> request
 				.requestMatchers("/error/**", "/swagger-ui/**",
-					"/v3/api-docs/**", "/oauth2/**", "/api/auth/refresh").permitAll()
+					"/v3/api-docs/**", "/oauth2/**", "/api/auth/refresh", "/api/health").permitAll()
 				.anyRequest().authenticated()
 			)
 			.build();
